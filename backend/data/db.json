@@ -1,0 +1,132 @@
+{
+  "users": [
+    {
+      "id": "ee99eb98-2b5e-4c9d-8314-32a066d4330b",
+      "username": "admin",
+      "password": "$2a$10$WUBRn3JDhIjBVbH37Rlj1ODK8EcXV97OjR5PZeUHvzTtuko2qYnoG",
+      "name": "Administrador",
+      "role": "admin",
+      "active": true,
+      "created_at": "2026-06-04T07:39:52.056Z"
+    }
+  ],
+  "gallineros": [
+    {
+      "id": "f66b751e-8c14-4d92-8d78-4130d0fcf5a8",
+      "name": "Gallinero A",
+      "description": "Gallinas ponedoras norte",
+      "chicken_count": 50,
+      "status": "active",
+      "created_at": "2026-06-04T07:39:52.057Z"
+    },
+    {
+      "id": "5790b8e5-ab9a-4edd-9856-65428495fcb2",
+      "name": "Gallinero B",
+      "description": "Gallinas ponedoras sur",
+      "chicken_count": 45,
+      "status": "active",
+      "created_at": "2026-06-04T07:39:52.057Z"
+    },
+    {
+      "id": "8357212c-440c-48ae-b0ae-e32354f09ef0",
+      "name": "Gallinero C",
+      "description": "Gallinas nuevas",
+      "chicken_count": 30,
+      "status": "active",
+      "created_at": "2026-06-04T07:39:52.057Z"
+    }
+  ],
+  "produccion": [
+    {
+      "id": "0d0e42e8-2228-433e-ade8-d99387f65236",
+      "gallinero_id": "f66b751e-8c14-4d92-8d78-4130d0fcf5a8",
+      "fecha": "2026-06-04",
+      "S": 1,
+      "M": 13,
+      "L": 18,
+      "XL": 6,
+      "created_at": "2026-06-04T07:39:52.057Z"
+    },
+    {
+      "id": "0b44d5f1-380d-4ff9-8d6a-8f0440d5fed4",
+      "gallinero_id": "5790b8e5-ab9a-4edd-9856-65428495fcb2",
+      "fecha": "2026-06-04",
+      "S": 3,
+      "M": 10,
+      "L": 15,
+      "XL": 8,
+      "created_at": "2026-06-04T07:39:52.057Z"
+    },
+    {
+      "id": "7413db1f-a7bc-4459-afbd-f856f751c34a",
+      "gallinero_id": "8357212c-440c-48ae-b0ae-e32354f09ef0",
+      "fecha": "2026-06-04",
+      "S": 0,
+      "M": 9,
+      "L": 11,
+      "XL": 5,
+      "created_at": "2026-06-04T07:39:52.057Z"
+    }
+  ],
+  "clientes": [
+    {
+      "id": "12bcb941-c8dd-4302-88be-c04d0e069901",
+      "nombre": "Juan Pérez",
+      "telefono": "123-456-7890",
+      "direccion": "Calle Principal 123",
+      "observaciones": "",
+      "saldo": 0,
+      "created_at": "2026-06-04T07:39:52.057Z"
+    },
+    {
+      "id": "236d70de-f690-4c86-b486-ef5c34d5419d",
+      "nombre": "María García",
+      "telefono": "098-765-4321",
+      "direccion": "Avenida Central 456",
+      "observaciones": "",
+      "saldo": 0,
+      "created_at": "2026-06-04T07:39:52.057Z"
+    },
+    {
+      "id": "eb1f2ff2-3637-441b-b08d-f6a75c9206f0",
+      "nombre": "Pedro López",
+      "telefono": "555-123-4567",
+      "direccion": "Barrio Norte 789",
+      "observaciones": "Cliente mayorista",
+      "saldo": 15000,
+      "created_at": "2026-06-04T07:39:52.057Z"
+    }
+  ],
+  "ventas": [
+    {
+      "id": "2f1f74d4-05ae-4d7a-8b4d-f408bc8215ce",
+      "cliente_id": "eb1f2ff2-3637-441b-b08d-f6a75c9206f0",
+      "fecha": "2026-06-03T07:39:52.057Z",
+      "total": 25000,
+      "pagado": 10000,
+      "saldo": 15000,
+      "estado": "parcial",
+      "es_fiado": 1,
+      "created_at": "2026-06-04T07:39:52.057Z"
+    }
+  ],
+  "venta_items": [
+    {
+      "id": "51631701-0bd2-4b8c-9b4b-fcac2b4119a4",
+      "venta_id": "2f1f74d4-05ae-4d7a-8b4d-f408bc8215ce",
+      "size": "L",
+      "cantidad": 50,
+      "precio_unitario": 300,
+      "subtotal": 15000
+    },
+    {
+      "id": "e686b415-f803-4e1c-9a11-126b4a575812",
+      "venta_id": "2f1f74d4-05ae-4d7a-8b4d-f408bc8215ce",
+      "size": "XL",
+      "cantidad": 20,
+      "precio_unitario": 500,
+      "subtotal": 10000
+    }
+  ],
+  "pagos": []
+}
