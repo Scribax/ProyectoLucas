@@ -14,6 +14,7 @@ declare global {
 }
 
 export const generateToken = (user: User): string => {
+  const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as any;
   return jwt.sign(
     { 
       id: user.id, 
@@ -21,7 +22,7 @@ export const generateToken = (user: User): string => {
       role: user.role 
     },
     JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn }
   );
 };
 

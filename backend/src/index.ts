@@ -15,6 +15,7 @@ import gallinerosRoutes from './routes/gallineros';
 import clientesRoutes from './routes/clientes';
 import ventasRoutes from './routes/ventas';
 import dashboardRoutes from './routes/dashboard';
+import gastosRoutes from './routes/gastos';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,8 +30,8 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['http://localhost', 'https://localhost'] 
+  origin: process.env.NODE_ENV === 'production'
+    ? ['http://localhost', 'https://localhost', 'https://donlucasproyect.com']
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }));
@@ -53,6 +54,7 @@ app.use('/api/gallineros', gallinerosRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/ventas', ventasRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/gastos', gastosRoutes);
 
 // Error 404
 app.use((req, res) => {
