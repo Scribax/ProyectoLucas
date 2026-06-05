@@ -17,8 +17,7 @@
     "emitDecoratorMetadata": true
   },
   "include": [
-    "src/index-simple.ts",
-    "src/db-json.ts"
+    "src/**/*.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }
