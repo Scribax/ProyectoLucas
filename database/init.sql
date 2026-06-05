@@ -130,7 +130,7 @@ CREATE TABLE pagos (
 CREATE TABLE gastos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     categoria VARCHAR(50) NOT NULL CHECK (categoria IN ('alimento', 'cartones', 'transporte', 'medicamentos', 'mantenimiento', 'servicios', 'otros')),
-    descripcion TEXT NOT NULL,
+    descripcion TEXT,
     monto DECIMAL(12,2) NOT NULL CHECK (monto > 0),
     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,

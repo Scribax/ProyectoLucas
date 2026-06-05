@@ -52,8 +52,8 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
   try {
     const { categoria, descripcion, monto, fecha } = req.body;
 
-    if (!categoria || !descripcion || !monto) {
-      return res.status(400).json({ message: 'Categoría, descripción y monto son requeridos' });
+    if (!categoria || !monto) {
+      return res.status(400).json({ message: 'Categoría y monto son requeridos' });
     }
 
     if (monto <= 0) {
