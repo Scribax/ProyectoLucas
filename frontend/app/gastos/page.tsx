@@ -248,7 +248,7 @@ export default function GastosPage() {
                             {cat.label}
                           </span>
                           <span className="text-xs text-gray-400">
-                            {format(new Date(gasto.fecha + 'T12:00:00'), 'dd/MM/yyyy')}
+                            {format(new Date((gasto.fecha.includes('T') ? gasto.fecha.split('T')[0] : gasto.fecha) + 'T12:00:00'), 'dd/MM/yyyy')}
                           </span>
                         </div>
                         <p className="font-medium text-gray-800 dark:text-gray-200 truncate mt-0.5">
