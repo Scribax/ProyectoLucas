@@ -233,7 +233,17 @@ export default function Dashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={produccionData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="fecha" tickFormatter={(d) => format(parseISO(d), 'dd/MM')} stroke="#9ca3af" />
+                        <XAxis 
+                          dataKey="fecha" 
+                          tickFormatter={(d) => {
+                            try {
+                              return d ? format(parseISO(d), 'dd/MM') : '';
+                            } catch (error) {
+                              return '';
+                            }
+                          }} 
+                          stroke="#9ca3af" 
+                        />
                         <YAxis stroke="#9ca3af" />
                         <Tooltip />
                         <Line type="monotone" dataKey="total" stroke="#eab308" strokeWidth={2} />

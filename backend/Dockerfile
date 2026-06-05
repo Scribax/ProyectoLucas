@@ -32,4 +32,4 @@ RUN mkdir -p /app/invoices /app/backups
 EXPOSE 3001
 
 # Comando de inicio
-CMD ["node", "dist/index-simple.js"]
+CMD ["node", "dist/index.js"]
