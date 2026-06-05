@@ -128,9 +128,10 @@ router.get('/monthly', async (req: Request, res: Response) => {
   try {
     const { mes } = req.query; // formato: YYYY-MM
     const mesStr = mes as string || new Date().toISOString().substring(0, 7);
-    const [year, month] = mesStr.split('-');
-    const startDate = `${year}-${month}-01`;
-    const endDate = `${year}-${month}-31`;
+    const [year, month] = mesStr.split('-').map(Number);
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
     // Producción del mes por tamaño
     const produccionResult = await query(

@@ -18,9 +18,15 @@ router.get('/', async (req: Request, res: Response) => {
     const params: any[] = [];
 
     if (mes) {
-      params.push(`${mes}-01`);
-      params.push(`${mes}-31`);
-      sql += ` AND g.fecha BETWEEN $${params.length - 1} AND $${params.length}`;
+      const [year, month] = (mes as string).split('-').map(Number);
+      // Primer día del mes
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      // Último día real del mes (0 = último día del mes anterior = último día de 'month')
+      const lastDay = new Date(year, month, 0).getDate();
+      const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+      params.push(startDate);
+      params.push(endDate);
+      sql += ` AND g.fecha BETWEEN $1 AND $2`;
     }
 
     sql += ' ORDER BY g.fecha DESC, g.created_at DESC';
