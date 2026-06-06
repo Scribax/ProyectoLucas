@@ -20,7 +20,8 @@ import {
   X,
   Package,
   CreditCard,
-  Home
+  Home,
+  Receipt
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import Link from 'next/link';
@@ -99,9 +100,11 @@ export default function Dashboard() {
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard', active: true },
     { icon: Home, label: 'Gallineros', href: '/gallineros' },
     { icon: Egg, label: 'Producción', href: '/produccion' },
+    { icon: Package, label: 'Artículos', href: '/articulos' },
     { icon: Users, label: 'Clientes', href: '/clientes' },
     { icon: ShoppingCart, label: 'Ventas', href: '/ventas' },
     { icon: CreditCard, label: 'Facturas', href: '/facturas' },
+    { icon: Receipt, label: 'Gastos', href: '/gastos' },
     { icon: TrendingUp, label: 'Reportes', href: '/reportes' },
   ];
 
