@@ -18,6 +18,7 @@ import {
   Home,
   CreditCard,
   Receipt,
+  Package,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -50,6 +51,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
     { icon: Home, label: 'Gallineros', href: '/gallineros' },
     { icon: Egg, label: 'Producción', href: '/produccion' },
+    { icon: Package, label: 'Artículos', href: '/articulos' },
     { icon: Users, label: 'Clientes', href: '/clientes' },
     { icon: ShoppingCart, label: 'Ventas', href: '/ventas' },
     { icon: CreditCard, label: 'Facturas', href: '/facturas' },

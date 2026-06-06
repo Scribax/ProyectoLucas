@@ -89,6 +89,13 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Cliente e items requeridos' });
     }
 
+    // Obtener saldo anterior del cliente
+    const clienteResult = await query('SELECT saldo FROM clientes WHERE id = $1', [cliente_id]);
+    if (clienteResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Cliente no encontrado' });
+    }
+    const saldoAnterior = parseFloat(clienteResult.rows[0].saldo) || 0;
+
     // Calcular totales
     let total = 0;
     const itemsConSubtotal = items.map((item: any) => {
@@ -101,11 +108,13 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
     const saldo = total - montoPagado;
     const estado = saldo <= 0 ? 'pagada' : (montoPagado > 0 ? 'parcial' : 'pendiente');
 
+    const saldoAcumulado = saldoAnterior + saldo;
+
     // Crear venta
     const ventaResult = await query(
-      `INSERT INTO ventas (cliente_id, total, pagado, saldo, estado, observaciones, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [cliente_id, total, montoPagado, saldo, estado, observaciones, req.user!.id]
+      `INSERT INTO ventas (cliente_id, total, pagado, saldo, estado, observaciones, created_by, saldo_anterior, saldo_acumulado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [cliente_id, total, montoPagado, saldo, estado, observaciones, req.user!.id, saldoAnterior, saldoAcumulado]
     );
 
     const ventaId = ventaResult.rows[0].id;
@@ -113,8 +122,17 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
     // Crear items
     for (const item of itemsConSubtotal) {
       await query(
-        'INSERT INTO venta_items (venta_id, size, cantidad, precio_unitario, subtotal) VALUES ($1, $2, $3, $4, $5)',
-        [ventaId, item.size, item.cantidad, item.precio_unitario, item.subtotal]
+        `INSERT INTO venta_items (venta_id, size, cantidad, precio_unitario, subtotal, articulo_id, descripcion)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          ventaId,
+          item.size || null,
+          item.cantidad,
+          item.precio_unitario,
+          item.subtotal,
+          item.articulo_id || null,
+          item.descripcion || null
+        ]
       );
     }
 
@@ -122,6 +140,7 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
       venta: { ...ventaResult.rows[0], items: itemsConSubtotal }
     });
   } catch (error) {
+    console.error('Error en POST /ventas:', error);
     res.status(500).json({ message: 'Error del servidor' });
   }
 });

@@ -149,10 +149,16 @@ export default function ProduccionPage() {
             L: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30',
             XL: 'bg-red-100 text-red-800 dark:bg-red-900/30',
           };
+          const labels: Record<string, string> = {
+            S: 'Chico',
+            M: 'Mediano',
+            L: 'Grande',
+            XL: 'Extra',
+          };
           return (
             <div key={size} className={`${colors[size]} rounded-2xl p-4 text-center`}>
               <p className="text-2xl font-bold">{total}</p>
-              <p className="text-xs font-medium">Huevos {size}</p>
+              <p className="text-xs font-medium">Huevo {labels[size]}</p>
             </div>
           );
         })}
@@ -179,10 +185,10 @@ export default function ProduccionPage() {
                     <div className="flex gap-3 text-sm text-gray-500 mt-1">
                       {p ? (
                         <>
-                          <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">S: {p.S || 0}</span>
-                          <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">M: {p.M || 0}</span>
-                          <span className="px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-800">L: {p.L || 0}</span>
-                          <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-800">XL: {p.XL || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Chico: {p.S || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">Mediano: {p.M || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-800">Grande: {p.L || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-800">Extra: {p.XL || 0}</span>
                         </>
                       ) : (
                         <span className="text-gray-400">Sin producción registrada</span>
@@ -209,19 +215,27 @@ export default function ProduccionPage() {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {['S', 'M', 'L', 'XL'].map((size) => (
-                  <div key={size}>
-                    <label className="block text-sm font-medium mb-1">Tamaño {size}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={form[size as keyof typeof form]}
-                      onChange={(e) => setForm({ ...form, [size]: parseInt(e.target.value) || 0 })}
-                      className="w-full px-4 py-3 rounded-xl border dark:border-gray-600 dark:bg-gray-700 text-lg text-center"
-                      autoFocus={size === 'S'}
-                    />
-                  </div>
-                ))}
+                {['S', 'M', 'L', 'XL'].map((size) => {
+                  const labels: Record<string, string> = {
+                    S: 'Chico',
+                    M: 'Mediano',
+                    L: 'Grande',
+                    XL: 'Extra',
+                  };
+                  return (
+                    <div key={size}>
+                      <label className="block text-sm font-medium mb-1">Huevo {labels[size]}</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form[size as keyof typeof form]}
+                        onChange={(e) => setForm({ ...form, [size]: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-3 rounded-xl border dark:border-gray-600 dark:bg-gray-700 text-lg text-center"
+                        autoFocus={size === 'S'}
+                      />
+                    </div>
+                  );
+                })}
               </div>
               <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 text-center">
                 <p className="text-sm text-gray-500">Total estimado</p>

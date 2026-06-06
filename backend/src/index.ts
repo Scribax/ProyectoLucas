@@ -16,6 +16,7 @@ import clientesRoutes from './routes/clientes';
 import ventasRoutes from './routes/ventas';
 import dashboardRoutes from './routes/dashboard';
 import gastosRoutes from './routes/gastos';
+import articulosRoutes from './routes/articulos';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -55,6 +56,7 @@ app.use('/api/clientes', clientesRoutes);
 app.use('/api/ventas', ventasRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/gastos', gastosRoutes);
+app.use('/api/articulos', articulosRoutes);
 
 // Error 404
 app.use((req, res) => {

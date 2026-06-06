@@ -211,11 +211,23 @@ export default function ClienteDetallePage() {
                     </div>
                     <p className="font-semibold mt-1">Factura #{venta.id?.slice(0, 8)}</p>
                     <div className="text-sm text-gray-500 mt-1">
-                      {venta.items?.map((item: any, i: number) => (
-                        <span key={i}>
-                          {item.cantidad}x Huevo {item.size}{i < venta.items.length - 1 ? ', ' : ''}
-                        </span>
-                      ))}
+                      {venta.items?.map((item: any, i: number) => {
+                        const getEggFriendlyName = (size: string) => {
+                          switch (size) {
+                            case 'S': return 'Chico';
+                            case 'M': return 'Mediano';
+                            case 'L': return 'Grande';
+                            case 'XL': return 'Extra';
+                            default: return size;
+                          }
+                        };
+                        const detalle = item.descripcion || (item.size ? `Huevo ${getEggFriendlyName(item.size)}` : 'Artículo');
+                        return (
+                          <span key={i}>
+                            {item.cantidad}x {detalle}{i < venta.items.length - 1 ? ', ' : ''}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
