@@ -164,6 +164,10 @@ router.post('/:id/produccion', requireWriteAccess, async (req: Request, res: Res
     const { id } = req.params;
     const { fecha, produccion } = req.body; // produccion: { S: 10, M: 20, L: 30, XL: 5 }
 
+    if (!produccion || typeof produccion !== 'object') {
+      return res.status(400).json({ message: 'Datos de producción inválidos' });
+    }
+
     // Verificar que el gallinero existe
     const gallineroResult = await query('SELECT * FROM gallineros WHERE id = $1', [id]);
     if (gallineroResult.rows.length === 0) {
@@ -173,36 +177,40 @@ router.post('/:id/produccion', requireWriteAccess, async (req: Request, res: Res
     const fechaProduccion = fecha || new Date().toISOString().split('T')[0];
     const items = [];
 
-    // Insertar cada tamaño
+    // Insertar cada tamaño usando UPSERT (INSERT ... ON CONFLICT DO UPDATE)
     for (const [size, cantidad] of Object.entries(produccion)) {
-      if (cantidad && (cantidad as number) > 0) {
+      const cantNum = parseInt(String(cantidad)) || 0;
+      if (cantNum < 0) continue; // ignorar negativos
+
+      if (cantNum === 0) {
+        // Si pone 0, eliminar el registro si existe (no guardar ceros)
+        await query(
+          `DELETE FROM produccion WHERE gallinero_id = $1 AND fecha = $2 AND size = $3`,
+          [id, fechaProduccion, size]
+        );
+      } else {
         const result = await query(
           `INSERT INTO produccion (gallinero_id, fecha, size, cantidad, created_by)
            VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (gallinero_id, fecha, size) 
-           DO UPDATE SET cantidad = $4, updated_at = CURRENT_TIMESTAMP
+           ON CONFLICT (gallinero_id, fecha, size)
+           DO UPDATE SET cantidad = EXCLUDED.cantidad, updated_at = CURRENT_TIMESTAMP
            RETURNING *`,
-          [id, fechaProduccion, size, cantidad, req.user!.id]
+          [id, fechaProduccion, size, cantNum, req.user!.id]
         );
         items.push(result.rows[0]);
       }
     }
 
-    // Registrar en auditoría
-    await query(
-      'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
-      [req.user!.id, 'REGISTER_PRODUCTION', 'produccion', id, JSON.stringify({ fecha: fechaProduccion, items })]
-    );
-
-    res.status(201).json({ 
+    res.status(201).json({
       message: 'Producción registrada',
-      produccion: items 
+      produccion: items
     });
 
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ message: 'Error del servidor' });
+  } catch (error: any) {
+    console.error('Error en POST /gallineros/:id/produccion:', error?.message || error);
+    res.status(500).json({ message: error?.message || 'Error del servidor' });
   }
 });
+
 
 export default router;

@@ -38,6 +38,9 @@ export default function ProduccionPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedGallinero, setSelectedGallinero] = useState<Gallinero | null>(null);
   const [form, setForm] = useState({ S: 0, M: 0, L: 0, XL: 0 });
+  // Strings para los inputs (permite borrar el 0 y escribir libremente)
+  const [formStr, setFormStr] = useState({ S: '0', M: '0', L: '0', XL: '0' });
+
 
   useEffect(() => {
     fetchGallineros();
@@ -68,12 +71,19 @@ export default function ProduccionPage() {
       });
       // Convertir array a map por gallinero_id
       const prodMap: Record<string, any> = {};
-      res.data.produccion.forEach((p: any) => {
-        prodMap[p.gallinero_id] = p;
+      (res.data.produccion || []).forEach((p: any) => {
+        prodMap[p.gallinero_id] = {
+          S: parseInt(p.S || p.s) || 0,
+          M: parseInt(p.M || p.m) || 0,
+          L: parseInt(p.L || p.l) || 0,
+          XL: parseInt(p.XL || p.xl) || 0,
+        };
       });
       setProduccion(prodMap);
     } catch (error) {
-      toast.error('Error cargando producción');
+      // No hacer toast aquí para no molestar si simplemente no hay producción
+      console.error('Error cargando producción:', error);
+      setProduccion({});
     } finally {
       setLoading(false);
     }
@@ -82,12 +92,12 @@ export default function ProduccionPage() {
   const handleOpenModal = (gallinero: Gallinero) => {
     setSelectedGallinero(gallinero);
     const existente = produccion[gallinero.id] || {};
-    setForm({
-      S: existente.S || 0,
-      M: existente.M || 0,
-      L: existente.L || 0,
-      XL: existente.XL || 0,
-    });
+    const s = existente.S || 0;
+    const m = existente.M || 0;
+    const l = existente.L || 0;
+    const xl = existente.XL || 0;
+    setForm({ S: s, M: m, L: l, XL: xl });
+    setFormStr({ S: String(s), M: String(m), L: String(l), XL: String(xl) });
     setModalOpen(true);
   };
 
@@ -99,16 +109,27 @@ export default function ProduccionPage() {
       const token = localStorage.getItem('token');
       await axios.post(
         `${API_URL}/gallineros/${selectedGallinero.id}/produccion`,
-        { fecha, produccion: form },
+        {
+          fecha,
+          produccion: {
+            S: Number(form.S) || 0,
+            M: Number(form.M) || 0,
+            L: Number(form.L) || 0,
+            XL: Number(form.XL) || 0,
+          }
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success('Producción registrada');
+      toast.success('¡Producción guardada!');
       setModalOpen(false);
       fetchProduccionDia();
-    } catch (error) {
-      toast.error('Error guardando producción');
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Error guardando producción';
+      toast.error(msg);
+      console.error('Error guardando producción:', error.response?.data);
     }
   };
+
 
   const calcularTotal = (p: any) => (p?.S || 0) + (p?.M || 0) + (p?.L || 0) + (p?.XL || 0);
 
@@ -226,10 +247,27 @@ export default function ProduccionPage() {
                     <div key={size}>
                       <label className="block text-sm font-medium mb-1">Huevo {labels[size]}</label>
                       <input
-                        type="number"
-                        min="0"
-                        value={form[size as keyof typeof form]}
-                        onChange={(e) => setForm({ ...form, [size]: parseInt(e.target.value) || 0 })}
+                        type="text"
+                        inputMode="numeric"
+                        value={formStr[size as keyof typeof formStr]}
+                        onFocus={(e) => {
+                          if (formStr[size as keyof typeof formStr] === '0') {
+                            setFormStr({ ...formStr, [size]: '' });
+                          }
+                          e.target.select();
+                        }}
+                        onBlur={() => {
+                          const val = formStr[size as keyof typeof formStr];
+                          if (!val || val === '') {
+                            setFormStr({ ...formStr, [size]: '0' });
+                            setForm({ ...form, [size]: 0 });
+                          }
+                        }}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setFormStr({ ...formStr, [size]: raw });
+                          setForm({ ...form, [size]: parseInt(raw) || 0 });
+                        }}
                         className="w-full px-4 py-3 rounded-xl border dark:border-gray-600 dark:bg-gray-700 text-lg text-center"
                         autoFocus={size === 'S'}
                       />
