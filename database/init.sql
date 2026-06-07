@@ -59,7 +59,8 @@ CREATE TABLE produccion (
     cantidad INTEGER NOT NULL CHECK (cantidad >= 0),
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_gallinero_fecha_size UNIQUE (gallinero_id, fecha, size)
 );
 
 -- ============================================

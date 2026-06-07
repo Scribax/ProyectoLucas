@@ -103,9 +103,9 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
         <aside
           className={`${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 pt-16 lg:pt-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-200 ease-in-out`}
+          } lg:translate-x-0 fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-64 pt-16 lg:pt-0 lg:h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-200 ease-in-out flex-shrink-0`}
         >
-          <nav className="p-4 space-y-1">
+          <nav className="p-4 space-y-1 overflow-y-auto h-full">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
               return (

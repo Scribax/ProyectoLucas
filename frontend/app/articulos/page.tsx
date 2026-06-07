@@ -227,12 +227,13 @@ export default function ArticulosPage() {
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={form.precio_unitario}
+                    onFocus={() => { if (form.precio_unitario === '0') setForm({ ...form, precio_unitario: '' }); }}
+                    onBlur={() => { if (!form.precio_unitario) setForm({ ...form, precio_unitario: '0' }); }}
                     onChange={(e) => setForm({ ...form, precio_unitario: e.target.value })}
                     placeholder="0.00"
-                    min="0"
-                    step="0.01"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none text-lg font-semibold text-gray-950 dark:text-white"
                     required
                   />

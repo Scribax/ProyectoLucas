@@ -337,12 +337,13 @@ export default function GastosPage() {
                     Monto *
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={formMonto}
+                    onFocus={(e) => { if (formMonto === '0') setFormMonto(''); }}
+                    onBlur={() => { if (!formMonto || formMonto === '') setFormMonto(''); }}
                     onChange={(e) => setFormMonto(e.target.value)}
                     placeholder="0"
-                    min="0"
-                    step="0.01"
                     required
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-yellow-500 outline-none text-lg font-semibold"
                   />
