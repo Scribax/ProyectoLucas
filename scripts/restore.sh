@@ -25,8 +25,8 @@ fi
 BACKUP_FILE="$1"
 COMPOSE_FILE="/opt/granja-avicola/docker-compose.yml"
 DB_CONTAINER="granja-db"
-DB_NAME="granja_avicola"
-DB_USER="postgres"
+DB_NAME=""
+DB_USER=""
 
 # Verificar que el archivo existe
 if [ ! -f "$BACKUP_FILE" ]; then
@@ -51,16 +51,21 @@ fi
 # Verificar que el contenedor está corriendo
 if ! docker ps -q -f name=$DB_CONTAINER | grep -q .; then
     echo -e "${YELLOW}🔄 Iniciando contenedor de base de datos...${NC}"
-    cd /opt/granja-avicola && docker compose up -d db
+    cd /opt/granja-avicola && docker compose up -d postgres
     sleep 5
 fi
+
+DB_NAME="$(docker exec $DB_CONTAINER printenv POSTGRES_DB 2>/dev/null || true)"
+DB_USER="$(docker exec $DB_CONTAINER printenv POSTGRES_USER 2>/dev/null || true)"
+DB_NAME="${DB_NAME:-granja_avicola}"
+DB_USER="${DB_USER:-postgres}"
 
 echo -e "${YELLOW}🔄 Restaurando base de datos...${NC}"
 
 # Crear backup de seguridad antes de restaurar
 SAFETY_BACKUP="/opt/granja-avicola/backups/pre_restore_$(date +%Y-%m-%d_%H-%M-%S).sql"
 echo -e "${BLUE}💾 Creando backup de seguridad...${NC}"
-docker exec $DB_CONTAINER pg_dump -U $DB_USER $DB_NAME > "$SAFETY_BACKUP" || true
+docker exec $DB_CONTAINER pg_dump -U "$DB_USER" -d "$DB_NAME" > "$SAFETY_BACKUP" || true
 
 # Descomprimir si es necesario
 if [[ "$BACKUP_FILE" == *.gz ]]; then

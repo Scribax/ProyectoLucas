@@ -9,8 +9,6 @@ set -e
 BACKUP_DIR="/opt/granja-avicola/backups"
 COMPOSE_FILE="/opt/granja-avicola/docker-compose.yml"
 DB_CONTAINER="granja-db"
-DB_NAME="granja_avicola"
-DB_USER="postgres"
 RETENTION_DAYS=30
 
 # Crear directorio de backups si no existe
@@ -37,9 +35,15 @@ if ! docker ps -q -f name=$DB_CONTAINER | grep -q .; then
     exit 1
 fi
 
+# Detectar credenciales desde el contenedor (compatibles con docker-compose)
+DB_NAME="$(docker exec $DB_CONTAINER printenv POSTGRES_DB 2>/dev/null || true)"
+DB_USER="$(docker exec $DB_CONTAINER printenv POSTGRES_USER 2>/dev/null || true)"
+DB_NAME="${DB_NAME:-granja_avicola}"
+DB_USER="${DB_USER:-postgres}"
+
 # Ejecutar backup
 echo -e "${YELLOW}💾 Exportando base de datos...${NC}"
-if docker exec $DB_CONTAINER pg_dump -U $DB_USER -d $DB_NAME > "$BACKUP_FILE"; then
+if docker exec $DB_CONTAINER pg_dump -U "$DB_USER" -d "$DB_NAME" > "$BACKUP_FILE"; then
     # Comprimir
     echo -e "${YELLOW}🗜️  Comprimiendo...${NC}"
     gzip "$BACKUP_FILE"

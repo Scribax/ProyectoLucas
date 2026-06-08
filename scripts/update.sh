@@ -41,7 +41,7 @@ docker compose build --no-cache backend frontend nginx
 
 # 5. Actualizar dependencias de DB si hay nuevas migraciones
 echo -e "${YELLOW}💾 Paso 5: Verificando base de datos...${NC}"
-docker compose up -d db
+docker compose up -d postgres
 sleep 3
 
 # 6. Iniciar todo
