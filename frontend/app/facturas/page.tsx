@@ -9,6 +9,13 @@ import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+const SIZE_LABELS: Record<string, string> = {
+  S: 'Chico',
+  M: 'Mediano',
+  L: 'Grande',
+  XL: 'Extra Grande',
+};
+
 export default function FacturasPage() {
   const [ventas, setVentas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,9 +64,14 @@ export default function FacturasPage() {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    const getEggFriendlyName = (size?: string) => {
+      if (!size) return 'Artículo';
+      return `Huevo ${SIZE_LABELS[size] || size}`;
+    };
+
     const itemsHtml = venta.items?.map((item: any) => `
       <tr>
-        <td>Huevo ${item.size}</td>
+        <td>${item.descripcion || item.articulo_nombre || getEggFriendlyName(item.size)}</td>
         <td>${item.cantidad}</td>
         <td>$${item.precio_unitario}</td>
         <td>$${item.subtotal}</td>

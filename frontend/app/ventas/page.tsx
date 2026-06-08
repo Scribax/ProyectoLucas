@@ -38,7 +38,7 @@ const TAMAÑOS_HUEVO = [
   { value: 'S', label: 'Huevo Chico' },
   { value: 'M', label: 'Huevo Mediano' },
   { value: 'L', label: 'Huevo Grande' },
-  { value: 'XL', label: 'Huevo Extra' },
+  { value: 'XL', label: 'Huevo Extra Grande' },
 ];
 
 export default function VentasPage() {

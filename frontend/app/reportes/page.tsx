@@ -64,6 +64,13 @@ interface MonthlyData {
   produccionDiaria: { fecha: string; total: number }[];
 }
 
+const SIZE_LABELS = {
+  S: 'Chico',
+  M: 'Mediano',
+  L: 'Grande',
+  XL: 'Extra Grande',
+} as const;
+
 export default function ReportesPage() {
   const currentMonth = new Date().toISOString().substring(0, 7);
   const [mes, setMes] = useState(currentMonth);
@@ -101,10 +108,10 @@ export default function ReportesPage() {
       [],
       ['=== PRODUCCIÓN ==='],
       ['Tamaño', 'Cantidad'],
-      ['S (Pequeño)', String(data.produccion?.s || 0)],
-      ['M (Mediano)', String(data.produccion?.m || 0)],
-      ['L (Grande)', String(data.produccion?.l || 0)],
-      ['XL (Extra Grande)', String(data.produccion?.xl || 0)],
+      ['Chico', String(data.produccion?.s || 0)],
+      ['Mediano', String(data.produccion?.m || 0)],
+      ['Grande', String(data.produccion?.l || 0)],
+      ['Extra Grande', String(data.produccion?.xl || 0)],
       ['TOTAL', String(data.produccion?.total || 0)],
       [],
       ['=== FINANZAS ==='],
@@ -140,10 +147,10 @@ export default function ReportesPage() {
   };
 
   const produccionData = [
-    { name: 'S', cantidad: data?.produccion?.s || 0, fill: '#fbbf24' },
-    { name: 'M', cantidad: data?.produccion?.m || 0, fill: '#f97316' },
-    { name: 'L', cantidad: data?.produccion?.l || 0, fill: '#22c55e' },
-    { name: 'XL', cantidad: data?.produccion?.xl || 0, fill: '#3b82f6' },
+    { name: SIZE_LABELS.S, cantidad: data?.produccion?.s || 0, fill: '#fbbf24' },
+    { name: SIZE_LABELS.M, cantidad: data?.produccion?.m || 0, fill: '#f97316' },
+    { name: SIZE_LABELS.L, cantidad: data?.produccion?.l || 0, fill: '#22c55e' },
+    { name: SIZE_LABELS.XL, cantidad: data?.produccion?.xl || 0, fill: '#3b82f6' },
   ];
 
   const gastosChartData = (data?.gastos || []).map((g) => ({
@@ -288,14 +295,14 @@ export default function ReportesPage() {
               </ResponsiveContainer>
               <div className="grid grid-cols-4 gap-2 mt-4">
                 {[
-                  { size: 'S', val: data?.produccion?.s || 0, color: 'bg-yellow-400' },
-                  { size: 'M', val: data?.produccion?.m || 0, color: 'bg-orange-400' },
-                  { size: 'L', val: data?.produccion?.l || 0, color: 'bg-green-400' },
-                  { size: 'XL', val: data?.produccion?.xl || 0, color: 'bg-blue-400' },
+                  { size: 'S', label: SIZE_LABELS.S, val: data?.produccion?.s || 0, color: 'bg-yellow-400' },
+                  { size: 'M', label: SIZE_LABELS.M, val: data?.produccion?.m || 0, color: 'bg-orange-400' },
+                  { size: 'L', label: SIZE_LABELS.L, val: data?.produccion?.l || 0, color: 'bg-green-400' },
+                  { size: 'XL', label: SIZE_LABELS.XL, val: data?.produccion?.xl || 0, color: 'bg-blue-400' },
                 ].map((item) => (
                   <div key={item.size} className="text-center">
                     <div className={`h-1.5 rounded-full ${item.color} mb-1`} />
-                    <p className="text-xs text-gray-500">{item.size}</p>
+                    <p className="text-xs text-gray-500">{item.label}</p>
                     <p className="text-sm font-bold">{item.val.toLocaleString()}</p>
                   </div>
                 ))}

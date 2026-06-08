@@ -11,6 +11,13 @@ import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+const SIZE_LABELS: Record<string, string> = {
+  S: 'Chico',
+  M: 'Mediano',
+  L: 'Grande',
+  XL: 'Extra Grande',
+};
+
 interface Cliente {
   id: string;
   nombre: string;
@@ -121,13 +128,7 @@ export default function ClienteDetallePage() {
       if (!printWindow) return;
 
       const getEggFriendlyName = (size: string) => {
-        switch (size) {
-          case 'S': return 'Chico';
-          case 'M': return 'Mediano';
-          case 'L': return 'Grande';
-          case 'XL': return 'Extra';
-          default: return size;
-        }
+        return SIZE_LABELS[size] || size;
       };
 
       const itemsHtml = (venta.items || []).map((item: any) => {
@@ -350,13 +351,7 @@ export default function ClienteDetallePage() {
                     <div className="text-sm text-gray-500 mt-1">
                       {venta.items?.map((item: any, i: number) => {
                         const getEggFriendlyName = (size: string) => {
-                          switch (size) {
-                            case 'S': return 'Chico';
-                            case 'M': return 'Mediano';
-                            case 'L': return 'Grande';
-                            case 'XL': return 'Extra';
-                            default: return size;
-                          }
+                          return SIZE_LABELS[size] || size;
                         };
                         const detalle = item.descripcion || (item.size ? `Huevo ${getEggFriendlyName(item.size)}` : 'Artículo');
                         return (

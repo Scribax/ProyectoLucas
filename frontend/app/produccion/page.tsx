@@ -174,7 +174,7 @@ export default function ProduccionPage() {
             S: 'Chico',
             M: 'Mediano',
             L: 'Grande',
-            XL: 'Extra',
+            XL: 'Extra Grande',
           };
           return (
             <div key={size} className={`${colors[size]} rounded-2xl p-4 text-center`}>
@@ -209,7 +209,7 @@ export default function ProduccionPage() {
                           <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Chico: {p.S || 0}</span>
                           <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">Mediano: {p.M || 0}</span>
                           <span className="px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-800">Grande: {p.L || 0}</span>
-                          <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-800">Extra: {p.XL || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-800">Extra Grande: {p.XL || 0}</span>
                         </>
                       ) : (
                         <span className="text-gray-400">Sin producción registrada</span>
@@ -241,7 +241,7 @@ export default function ProduccionPage() {
                     S: 'Chico',
                     M: 'Mediano',
                     L: 'Grande',
-                    XL: 'Extra',
+                    XL: 'Extra Grande',
                   };
                   return (
                     <div key={size}>
