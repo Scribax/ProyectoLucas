@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
-import { ArrowLeft, Phone, MapPin, DollarSign, CreditCard, CheckCircle, User, Calendar, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, DollarSign, CreditCard, CheckCircle, User, Calendar, FileText, Trash2, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -93,6 +93,111 @@ export default function ClienteDetallePage() {
     setSelectedVenta(venta || null);
     setPagoMonto(venta ? venta.saldo : 0);
     setPagoModal(true);
+  };
+
+  const escapeHtml = (value: any) => {
+    const str = String(value ?? '');
+    return str
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  };
+
+  const viewFactura = async (ventaId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.get(`${API_URL}/ventas/${ventaId}`, { headers });
+      const venta = res.data?.venta;
+
+      if (!venta) {
+        toast.error('No se pudo cargar la factura');
+        return;
+      }
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      const getEggFriendlyName = (size: string) => {
+        switch (size) {
+          case 'S': return 'Chico';
+          case 'M': return 'Mediano';
+          case 'L': return 'Grande';
+          case 'XL': return 'Extra';
+          default: return size;
+        }
+      };
+
+      const itemsHtml = (venta.items || []).map((item: any) => {
+        const nombre =
+          item.descripcion ||
+          item.articulo_nombre ||
+          (item.size ? `Huevo ${getEggFriendlyName(item.size)}` : 'Artículo');
+
+        return `
+          <tr>
+            <td>${escapeHtml(nombre)}</td>
+            <td>${escapeHtml(item.cantidad)}</td>
+            <td>$${escapeHtml(item.precio_unitario)}</td>
+            <td>$${escapeHtml(item.subtotal)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Factura #${escapeHtml(venta.id?.slice(0, 8))}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto; }
+            .header { text-align: center; border-bottom: 3px solid #eab308; padding-bottom: 20px; margin-bottom: 20px; }
+            .header h1 { margin: 0; color: #333; }
+            .header p { color: #666; margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #f5f5f5; }
+            .total { font-size: 22px; font-weight: bold; text-align: right; margin-top: 20px; }
+            .footer { text-align: center; margin-top: 40px; color: #666; font-size: 14px; }
+            @media print { button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>GRANJA AVÍCOLA</h1>
+            <p>Factura de Venta</p>
+            <p>#${escapeHtml(venta.id?.slice(0, 8))}</p>
+          </div>
+          <p><strong>Cliente:</strong> ${escapeHtml(venta.cliente_nombre || cliente.nombre)}</p>
+          <p><strong>Fecha:</strong> ${escapeHtml(format(parseISO(venta.fecha), 'dd/MM/yyyy HH:mm'))}</p>
+          <table>
+            <thead>
+              <tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+          <div class="total">
+            TOTAL: $${escapeHtml(Number(venta.total || 0).toLocaleString())}<br>
+            <span style="font-size: 16px;">Pagado: $${escapeHtml(Number(venta.pagado || 0).toLocaleString())}</span><br>
+            ${(Number(venta.saldo) || 0) > 0 ? `<span style="font-size: 16px; color: red;">Saldo: $${escapeHtml(Number(venta.saldo || 0).toLocaleString())}</span>` : ''}
+          </div>
+          <div class="footer">
+            <p>¡Gracias por su compra!</p>
+          </div>
+          <button onclick="window.print()" style="width: 100%; padding: 15px; background: #eab308; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 20px;">
+            Imprimir / Guardar PDF
+          </button>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Error cargando factura');
+    }
   };
 
   const deleteCliente = async () => {
@@ -275,6 +380,13 @@ export default function ClienteDetallePage() {
                   >
                     <CreditCard className="w-4 h-4" />
                     Pagar Factura
+                  </button>
+                  <button
+                    onClick={() => viewFactura(venta.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 text-sm w-full sm:w-auto justify-center"
+                  >
+                    <Download className="w-4 h-4" />
+                    Ver Factura
                   </button>
                 </div>
               </div>
