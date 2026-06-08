@@ -165,4 +165,39 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
   }
 });
 
+// Eliminar cliente (soft delete)
+router.delete('/:id', requireWriteAccess, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const clienteResult = await query('SELECT id, nombre, saldo FROM clientes WHERE id = $1', [id]);
+    if (clienteResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Cliente no encontrado' });
+    }
+
+    const cliente = clienteResult.rows[0];
+    const saldo = parseFloat(cliente.saldo) || 0;
+    if (saldo > 0) {
+      return res.status(400).json({ message: 'No se puede eliminar un cliente con saldo pendiente' });
+    }
+
+    const result = await query(
+      `UPDATE clientes
+       SET is_active = false, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    await query(
+      'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
+      [req.user!.id, 'DELETE', 'cliente', id, JSON.stringify({ nombre: result.rows[0]?.nombre })]
+    );
+
+    res.json({ message: 'Cliente eliminado', cliente: result.rows[0] });
+  } catch (error) {
+    console.error('Error en DELETE /clientes:', error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
 export default router;

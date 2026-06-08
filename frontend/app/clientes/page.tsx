@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Users, Plus, Search, Phone, MapPin, DollarSign, Eye } from 'lucide-react';
+import { Users, Plus, Search, Phone, MapPin, DollarSign, Eye, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
@@ -72,6 +72,27 @@ export default function ClientesPage() {
     c.telefono.includes(search)
   );
 
+  const deleteCliente = async (cliente: Cliente) => {
+    if (cliente.saldo > 0) {
+      toast.error('No se puede eliminar un cliente con saldo pendiente');
+      return;
+    }
+
+    const ok = confirm(`¿Eliminar el cliente "${cliente.nombre}"? Esta acción no se puede deshacer.`);
+    if (!ok) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/clientes/${cliente.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setClientes((prev) => prev.filter((c) => c.id !== cliente.id));
+      toast.success('Cliente eliminado');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Error eliminando cliente');
+    }
+  };
+
   return (
     <DashboardLayout title="Clientes">
       {/* Search y Nuevo */}
@@ -139,6 +160,17 @@ export default function ClientesPage() {
                     {c.saldo > 0 ? `$${c.saldo.toLocaleString()}` : 'Al día'}
                   </div>
                   {c.saldo > 0 && <p className="text-xs text-red-400">Saldo pendiente</p>}
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteCliente(c); }}
+                      disabled={c.saldo > 0}
+                      className="p-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={c.saldo > 0 ? 'No se puede eliminar con saldo pendiente' : 'Eliminar cliente'}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </Link>

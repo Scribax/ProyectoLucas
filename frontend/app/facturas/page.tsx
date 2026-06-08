@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import DashboardLayout from '@/components/DashboardLayout';
-import { CreditCard, Download, Search } from 'lucide-react';
+import { Download, Search, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -35,6 +35,22 @@ export default function FacturasPage() {
   const filteredVentas = ventas.filter((v: any) =>
     v.cliente_nombre?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const deleteVenta = async (venta: any) => {
+    const ok = confirm(`¿Eliminar la factura/venta #${venta.id?.slice(0, 8)} de ${venta.cliente_nombre}? Esta acción no se puede deshacer.`);
+    if (!ok) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/ventas/${venta.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setVentas((prev) => prev.filter((v: any) => v.id !== venta.id));
+      toast.success('Factura eliminada');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Error eliminando factura');
+    }
+  };
 
   const downloadInvoice = (venta: any) => {
     // Crear una ventana para imprimir/descargar
@@ -142,13 +158,23 @@ export default function FacturasPage() {
                 </div>
               </div>
               <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => downloadInvoice(venta)}
-                  className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 text-sm"
-                >
-                  <Download className="w-4 h-4" />
-                  Ver Factura
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => deleteVenta(venta)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 text-sm"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar
+                  </button>
+                  <button
+                    onClick={() => downloadInvoice(venta)}
+                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Ver Factura
+                  </button>
+                </div>
               </div>
             </div>
           ))}

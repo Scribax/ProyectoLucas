@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
-import { ArrowLeft, Phone, MapPin, DollarSign, CreditCard, CheckCircle, User, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, DollarSign, CreditCard, CheckCircle, User, Calendar, FileText, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -95,6 +95,27 @@ export default function ClienteDetallePage() {
     setPagoModal(true);
   };
 
+  const deleteCliente = async () => {
+    if (!cliente) return;
+    if (cliente.saldo > 0) {
+      toast.error('No se puede eliminar un cliente con saldo pendiente');
+      return;
+    }
+
+    const ok = confirm(`¿Eliminar el cliente "${cliente.nombre}"? Esta acción no se puede deshacer.`);
+    if (!ok) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.delete(`${API_URL}/clientes/${cliente.id}`, { headers });
+      toast.success('Cliente eliminado');
+      router.push('/clientes');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Error eliminando cliente');
+    }
+  };
+
   const ventasPendientes = ventas.filter(v => v.saldo > 0);
   const ventasPagadas = ventas.filter(v => v.saldo <= 0);
 
@@ -127,14 +148,25 @@ export default function ClienteDetallePage() {
   return (
     <DashboardLayout title={cliente.nombre}>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push('/clientes')}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl font-bold">{cliente.nombre}</h2>
+        </div>
         <button
-          onClick={() => router.push('/clientes')}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl"
+          onClick={deleteCliente}
+          disabled={cliente.saldo > 0}
+          className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={cliente.saldo > 0 ? 'No se puede eliminar con saldo pendiente' : 'Eliminar cliente'}
         >
-          <ArrowLeft className="w-5 h-5" />
+          <Trash2 className="w-4 h-4" />
+          Eliminar
         </button>
-        <h2 className="text-2xl font-bold">{cliente.nombre}</h2>
       </div>
 
       {/* Info del Cliente */}

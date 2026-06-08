@@ -164,4 +164,31 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
   }
 });
 
+// Eliminar venta (equivale a eliminar "factura" en el listado)
+router.delete('/:id', requireWriteAccess, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const ventaResult = await query(
+      'SELECT id, cliente_id, total, pagado, saldo, estado FROM ventas WHERE id = $1',
+      [id]
+    );
+    if (ventaResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+
+    const result = await query('DELETE FROM ventas WHERE id = $1 RETURNING *', [id]);
+
+    await query(
+      'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
+      [req.user!.id, 'DELETE', 'venta', id, JSON.stringify({ total: result.rows[0]?.total, saldo: result.rows[0]?.saldo })]
+    );
+
+    res.json({ message: 'Venta eliminada', venta: result.rows[0] });
+  } catch (error) {
+    console.error('Error en DELETE /ventas:', error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
 export default router;
