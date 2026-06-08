@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../config/database';
-import { authenticateJWT, requireWriteAccess } from '../middleware/auth';
+import { authenticateJWT, requireRole, requireWriteAccess } from '../middleware/auth';
 
 const router = Router();
 router.use(authenticateJWT);
@@ -8,7 +8,8 @@ router.use(authenticateJWT);
 // Listar ventas
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { cliente_id, desde, hasta, estado } = req.query;
+    const { cliente_id, desde, hasta, estado, incluir_anuladas } = req.query;
+    const incluirAnuladas = incluir_anuladas === 'true';
     let sql = `
       SELECT v.*, c.nombre as cliente_nombre, c.telefono as cliente_telefono
       FROM ventas v
@@ -16,6 +17,10 @@ router.get('/', async (req: Request, res: Response) => {
       WHERE 1=1`;
     const params: any[] = [];
     let paramCount = 0;
+
+    if (!incluirAnuladas) {
+      sql += ` AND v.is_void = false`;
+    }
 
     if (cliente_id) {
       paramCount++;
@@ -164,17 +169,77 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
   }
 });
 
-// Eliminar venta (equivale a eliminar "factura" en el listado)
-router.delete('/:id', requireWriteAccess, async (req: Request, res: Response) => {
+// Anular venta/factura (soft): mantiene el registro pero lo excluye de reportes y deja saldo en 0
+router.patch('/:id/anular', requireWriteAccess, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     const ventaResult = await query(
-      'SELECT id, cliente_id, total, pagado, saldo, estado FROM ventas WHERE id = $1',
+      'SELECT id, cliente_id, total, pagado, saldo, estado, is_void FROM ventas WHERE id = $1',
       [id]
     );
     if (ventaResult.rows.length === 0) {
       return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+
+    const venta = ventaResult.rows[0];
+    if (venta.is_void) {
+      return res.status(400).json({ message: 'La venta ya está anulada' });
+    }
+
+    const pagosResult = await query('SELECT COUNT(*)::int as count FROM pagos WHERE venta_id = $1', [id]);
+    const pagosCount = pagosResult.rows[0]?.count || 0;
+    const pagado = parseFloat(String(venta.pagado)) || 0;
+
+    if (pagosCount > 0 || pagado > 0) {
+      return res.status(400).json({ message: 'No se puede anular una venta con pagos registrados' });
+    }
+
+    const updated = await query(
+      `UPDATE ventas
+       SET is_void = true,
+           voided_at = CURRENT_TIMESTAMP,
+           voided_by = $2,
+           saldo = 0,
+           estado = 'pagada',
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [id, req.user!.id]
+    );
+
+    await query(
+      'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
+      [req.user!.id, 'VOID', 'venta', id, JSON.stringify({ total: updated.rows[0]?.total })]
+    );
+
+    res.json({ message: 'Venta anulada', venta: updated.rows[0] });
+  } catch (error) {
+    console.error('Error en PATCH /ventas/:id/anular:', error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
+// Eliminar venta (equivale a eliminar "factura" en el listado)
+router.delete('/:id', requireRole('admin'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const ventaResult = await query(
+      'SELECT id, cliente_id, total, pagado, saldo, estado, is_void FROM ventas WHERE id = $1',
+      [id]
+    );
+    if (ventaResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+
+    const venta = ventaResult.rows[0];
+    const pagosResult = await query('SELECT COUNT(*)::int as count FROM pagos WHERE venta_id = $1', [id]);
+    const pagosCount = pagosResult.rows[0]?.count || 0;
+    const pagado = parseFloat(String(venta.pagado)) || 0;
+
+    if (pagosCount > 0 || pagado > 0) {
+      return res.status(400).json({ message: 'No se puede eliminar una venta con pagos registrados' });
     }
 
     const result = await query('DELETE FROM ventas WHERE id = $1 RETURNING *', [id]);

@@ -48,6 +48,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       FROM ventas v
       LEFT JOIN venta_items vi ON v.id = vi.venta_id
       WHERE v.cliente_id = $1
+        AND v.is_void = false
       GROUP BY v.id
       ORDER BY v.fecha DESC
       LIMIT 50`,
@@ -67,7 +68,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         SUM(total) as total_comprado,
         SUM(pagado) as total_pagado,
         SUM(saldo) as saldo_pendiente
-      FROM ventas WHERE cliente_id = $1`,
+      FROM ventas WHERE cliente_id = $1 AND is_void = false`,
       [id]
     );
 

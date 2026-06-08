@@ -43,19 +43,19 @@ export default function FacturasPage() {
     v.cliente_nombre?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const deleteVenta = async (venta: any) => {
-    const ok = confirm(`¿Eliminar la factura/venta #${venta.id?.slice(0, 8)} de ${venta.cliente_nombre}? Esta acción no se puede deshacer.`);
+  const voidVenta = async (venta: any) => {
+    const ok = confirm(`¿Anular la factura/venta #${venta.id?.slice(0, 8)} de ${venta.cliente_nombre}? Se conservará el registro pero no contará en reportes.`);
     if (!ok) return;
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/ventas/${venta.id}`, {
+      await axios.patch(`${API_URL}/ventas/${venta.id}/anular`, null, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setVentas((prev) => prev.filter((v: any) => v.id !== venta.id));
-      toast.success('Factura eliminada');
+      toast.success('Factura anulada');
+      fetchVentas();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Error eliminando factura');
+      toast.error(error?.response?.data?.message || 'Error anulando factura');
     }
   };
 
@@ -172,12 +172,12 @@ export default function FacturasPage() {
               <div className="mt-4 flex justify-end">
                 <div className="flex gap-2">
                   <button
-                    onClick={() => deleteVenta(venta)}
+                    onClick={() => voidVenta(venta)}
                     className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 text-sm"
-                    title="Eliminar"
+                    title="Anular"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Eliminar
+                    Anular
                   </button>
                   <button
                     onClick={() => downloadInvoice(venta)}

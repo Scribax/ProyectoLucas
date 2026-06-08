@@ -13,7 +13,7 @@ router.get('/stats', async (req: Request, res: Response) => {
     );
 
     const ventasHoyResult = await query(
-      `SELECT SUM(total) as total, COUNT(*) as cantidad FROM ventas WHERE DATE(fecha) = CURRENT_DATE`
+      `SELECT SUM(total) as total, COUNT(*) as cantidad FROM ventas WHERE DATE(fecha) = CURRENT_DATE AND is_void = false`
     );
 
     const gallinerosResult = await query(
@@ -149,7 +149,7 @@ router.get('/monthly', async (req: Request, res: Response) => {
     // Ingresos del mes
     const ingresosResult = await query(
       `SELECT SUM(total) as ingresos, SUM(pagado) as cobrado, SUM(saldo) as pendiente
-       FROM ventas WHERE DATE(fecha) BETWEEN $1 AND $2`,
+       FROM ventas WHERE DATE(fecha) BETWEEN $1 AND $2 AND is_void = false`,
       [startDate, endDate]
     );
 
@@ -168,7 +168,7 @@ router.get('/monthly', async (req: Request, res: Response) => {
       `SELECT c.nombre, c.telefono, SUM(v.total) as total_comprado, COUNT(v.id) as cant_ventas
        FROM ventas v
        JOIN clientes c ON v.cliente_id = c.id
-       WHERE DATE(v.fecha) BETWEEN $1 AND $2
+       WHERE DATE(v.fecha) BETWEEN $1 AND $2 AND v.is_void = false
        GROUP BY c.id, c.nombre, c.telefono
        ORDER BY total_comprado DESC
        LIMIT 5`,

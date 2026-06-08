@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
+import { query } from './config/database';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -60,6 +61,13 @@ app.use('/api/gastos', gastosRoutes);
 app.use('/api/articulos', articulosRoutes);
 app.use('/api/produccion', produccionRoutes);
 
+const ensureSchema = async () => {
+  await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS is_void BOOLEAN NOT NULL DEFAULT false`);
+  await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS voided_at TIMESTAMP WITH TIME ZONE`);
+  await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS voided_by UUID`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_ventas_is_void ON ventas(is_void)`);
+};
+
 // Error 404
 app.use((req, res) => {
   res.status(404).json({ message: 'Ruta no encontrada' });
@@ -75,8 +83,15 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`🚀 API corriendo en puerto ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+const start = async () => {
+  await ensureSchema();
+  app.listen(PORT, () => {
+    console.log(`🚀 API corriendo en puerto ${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+};
+
+start().catch((err) => {
+  console.error('Error iniciando servidor:', err);
+  process.exit(1);
 });
