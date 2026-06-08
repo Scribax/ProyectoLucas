@@ -41,14 +41,44 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Cliente no encontrado' });
     }
 
-    // Historial de ventas
+    // Historial de ventas activas
     const ventasResult = await query(
-      `SELECT v.*, 
-        json_agg(vi.*) as items
+      `SELECT v.*,
+        json_agg(json_build_object(
+          'id', vi.id,
+          'size', vi.size,
+          'cantidad', vi.cantidad,
+          'precio_unitario', vi.precio_unitario,
+          'subtotal', vi.subtotal,
+          'articulo_id', vi.articulo_id,
+          'descripcion', vi.descripcion
+        ) ORDER BY vi.id) as items
       FROM ventas v
       LEFT JOIN venta_items vi ON v.id = vi.venta_id
       WHERE v.cliente_id = $1
         AND v.is_void = false
+      GROUP BY v.id
+      ORDER BY v.fecha DESC
+      LIMIT 50`,
+      [id]
+    );
+
+    // Historial de ventas anuladas
+    const ventasAnuladasResult = await query(
+      `SELECT v.*,
+        json_agg(json_build_object(
+          'id', vi.id,
+          'size', vi.size,
+          'cantidad', vi.cantidad,
+          'precio_unitario', vi.precio_unitario,
+          'subtotal', vi.subtotal,
+          'articulo_id', vi.articulo_id,
+          'descripcion', vi.descripcion
+        ) ORDER BY vi.id) as items
+      FROM ventas v
+      LEFT JOIN venta_items vi ON v.id = vi.venta_id
+      WHERE v.cliente_id = $1
+        AND v.is_void = true
       GROUP BY v.id
       ORDER BY v.fecha DESC
       LIMIT 50`,
@@ -61,9 +91,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       [id]
     );
 
-    // Calcular estadísticas
+    // Calcular estadísticas (solo ventas activas)
     const statsResult = await query(
-      `SELECT 
+      `SELECT
         COUNT(*) as total_ventas,
         SUM(total) as total_comprado,
         SUM(pagado) as total_pagado,
@@ -75,6 +105,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     res.json({
       cliente: clienteResult.rows[0],
       ventas: ventasResult.rows,
+      ventas_anuladas: ventasAnuladasResult.rows,
       pagos: pagosResult.rows,
       estadisticas: statsResult.rows[0]
     });

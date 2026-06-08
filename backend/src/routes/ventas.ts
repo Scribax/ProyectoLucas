@@ -173,6 +173,7 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
 router.patch('/:id/anular', requireWriteAccess, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { motivo } = req.body;
 
     const ventaResult = await query(
       'SELECT id, cliente_id, total, pagado, saldo, estado, is_void FROM ventas WHERE id = $1',
@@ -200,17 +201,18 @@ router.patch('/:id/anular', requireWriteAccess, async (req: Request, res: Respon
        SET is_void = true,
            voided_at = CURRENT_TIMESTAMP,
            voided_by = $2,
+           void_reason = $3,
            saldo = 0,
            estado = 'pagada',
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1
        RETURNING *`,
-      [id, req.user!.id]
+      [id, req.user!.id, motivo || null]
     );
 
     await query(
       'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
-      [req.user!.id, 'VOID', 'venta', id, JSON.stringify({ total: updated.rows[0]?.total })]
+      [req.user!.id, 'VOID', 'venta', id, JSON.stringify({ total: updated.rows[0]?.total, motivo: motivo || null })]
     );
 
     res.json({ message: 'Venta anulada', venta: updated.rows[0] });

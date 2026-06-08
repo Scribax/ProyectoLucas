@@ -65,6 +65,7 @@ const ensureSchema = async () => {
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS is_void BOOLEAN NOT NULL DEFAULT false`);
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS voided_at TIMESTAMP WITH TIME ZONE`);
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS voided_by UUID`);
+  await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS void_reason TEXT`);
   await query(`CREATE INDEX IF NOT EXISTS idx_ventas_is_void ON ventas(is_void)`);
 };
 
