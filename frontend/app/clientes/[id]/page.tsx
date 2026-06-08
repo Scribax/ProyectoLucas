@@ -170,7 +170,7 @@ export default function ClienteDetallePage() {
             <p>Factura de Venta</p>
             <p>#${escapeHtml(venta.id?.slice(0, 8))}</p>
           </div>
-          <p><strong>Cliente:</strong> ${escapeHtml(venta.cliente_nombre || cliente.nombre)}</p>
+          <p><strong>Cliente:</strong> ${escapeHtml(venta.cliente_nombre || cliente?.nombre || '')}</p>
           <p><strong>Fecha:</strong> ${escapeHtml(format(parseISO(venta.fecha), 'dd/MM/yyyy HH:mm'))}</p>
           <table>
             <thead>
