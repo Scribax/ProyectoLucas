@@ -302,44 +302,44 @@ export default function VentasPage() {
         <div className="grid gap-4">
           {filteredVentas.map((v) => (
             <div key={v.id} className={`bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border hover:shadow-md transition-shadow ${v.is_void ? 'border-red-200 dark:border-red-800/50 opacity-75' : 'border-gray-100 dark:border-gray-700'}`}>
-              <div className="flex justify-between items-start">
-                <div className="flex-1 cursor-pointer" onClick={() => openInvoice(v)}>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{v.cliente_nombre}</p>
-                  <p className="text-sm text-gray-400 mt-0.5">{format(parseISO(v.fecha), 'dd/MM/yyyy HH:mm')}</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex justify-between items-center gap-3">
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openInvoice(v)}>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">{v.cliente_nombre}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{format(parseISO(v.fecha), 'dd/MM/yyyy HH:mm')}</p>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                     {v.is_void ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                         <Ban className="w-3 h-3" />Anulada
                       </span>
                     ) : (
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${v.estado === 'pagada' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : v.estado === 'parcial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${v.estado === 'pagada' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : v.estado === 'parcial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>
                         {v.estado === 'pagada' ? 'Pagada' : v.estado === 'parcial' ? 'Pago Parcial' : 'Pendiente'}
                       </span>
                     )}
                     {!v.is_void && (
                       <button onClick={(e) => { e.stopPropagation(); openVoidModal(v); }}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors">
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                         <Trash2 className="w-3 h-3" />Anular
                       </button>
                     )}
                     {v.is_void && v.void_reason && (
-                      <span className="text-xs text-gray-400 italic">Motivo: {v.void_reason}</span>
+                      <span className="text-xs text-gray-400 italic truncate max-w-xs">Motivo: {v.void_reason}</span>
                     )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-xl font-bold ${v.is_void ? 'line-through text-gray-400' : 'text-gray-950 dark:text-white'}`}>
+                <div className="text-right flex-shrink-0">
+                  <p className={`text-lg font-bold ${v.is_void ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>
                     ${parseFloat(String(v.total)).toLocaleString()}
                   </p>
                   {!v.is_void && parseFloat(String(v.saldo)) > 0 ? (
-                    <p className="text-sm text-red-500 font-medium mt-0.5">Debe: ${parseFloat(String(v.saldo)).toLocaleString()}</p>
+                    <p className="text-xs text-red-500 font-medium mt-0.5">Debe: ${parseFloat(String(v.saldo)).toLocaleString()}</p>
                   ) : !v.is_void ? (
-                    <p className="text-sm text-green-500 font-medium mt-0.5">Al día ✓</p>
+                    <p className="text-xs text-green-500 font-medium mt-0.5">Al día ✓</p>
                   ) : null}
                   {!v.is_void && parseFloat(String(v.saldo)) > 0 && (
                     <button onClick={() => { setPagoRapidoModal(v); setMontoPago(String(v.saldo)); }}
-                      className="mt-2 flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-semibold hover:bg-green-600 transition-colors ml-auto">
-                      <DollarSign className="w-3.5 h-3.5" />Registrar Pago
+                      className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 bg-green-500 text-white rounded-lg text-xs font-semibold hover:bg-green-600 transition-colors">
+                      <DollarSign className="w-3 h-3" />Pagar
                     </button>
                   )}
                 </div>
