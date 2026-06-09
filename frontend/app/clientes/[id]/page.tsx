@@ -7,7 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import {
   ArrowLeft, Phone, MapPin, DollarSign, CreditCard, CheckCircle,
   User, Calendar, FileText, Trash2, Download, Ban, ChevronDown, ChevronUp,
-  TrendingUp, ShoppingBag, Clock, AlertTriangle, MessageCircle
+  TrendingUp, ShoppingBag, Clock, AlertTriangle, MessageCircle, Pencil
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -65,6 +65,8 @@ export default function ClienteDetallePage() {
   const [pagoModal, setPagoModal] = useState(false);
   const [pagoMonto, setPagoMonto] = useState(0);
   const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null);
+  const [editModal, setEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ nombre: '', telefono: '', direccion: '', observaciones: '' });
 
   useEffect(() => { fetchData(); }, [clienteId]);
 
@@ -80,6 +82,32 @@ export default function ClienteDetallePage() {
       setEstadisticas(clienteRes.data.estadisticas || null);
     } catch { toast.error('Error cargando datos del cliente'); }
     finally { setLoading(false); }
+  };
+
+  const openEditModal = () => {
+    if (!cliente) return;
+    setEditForm({
+      nombre: cliente.nombre || '',
+      telefono: cliente.telefono || '',
+      direccion: cliente.direccion || '',
+      observaciones: cliente.observaciones || '',
+    });
+    setEditModal(true);
+  };
+
+  const handleEdit = async () => {
+    if (!cliente || !editForm.nombre.trim()) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/clientes/${clienteId}`, editForm, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success('Cliente actualizado');
+      setEditModal(false);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Error actualizando cliente');
+    }
   };
 
   const handlePago = async () => {
@@ -211,11 +239,17 @@ export default function ClienteDetallePage() {
           </button>
           <h2 className="text-2xl font-bold">{cliente.nombre}</h2>
         </div>
-        <button onClick={deleteCliente} disabled={cliente.saldo > 0}
-          className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          title={cliente.saldo > 0 ? 'No se puede eliminar con saldo pendiente' : 'Eliminar cliente'}>
-          <Trash2 className="w-4 h-4" />Eliminar
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openEditModal}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+            <Pencil className="w-4 h-4" />Editar
+          </button>
+          <button onClick={deleteCliente} disabled={cliente.saldo > 0}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={cliente.saldo > 0 ? 'No se puede eliminar con saldo pendiente' : 'Eliminar cliente'}>
+            <Trash2 className="w-4 h-4" />Eliminar
+          </button>
+        </div>
       </div>
 
       {/* Info del Cliente */}
@@ -448,6 +482,69 @@ export default function ClienteDetallePage() {
           <AlertTriangle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Sin actividad registrada</p>
           <p className="text-gray-400 text-sm mt-1">Aun no hay ventas ni pagos para este cliente.</p>
+        </div>
+      )}
+
+      {/* Modal de Edición */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-bold mb-4">Editar Cliente</h3>
+            <div className="grid gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nombre *</label>
+                <input
+                  type="text"
+                  value={editForm.nombre}
+                  onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border dark:border-gray-600 dark:bg-gray-700"
+                  placeholder="Nombre del cliente"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Teléfono</label>
+                <input
+                  type="text"
+                  value={editForm.telefono}
+                  onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border dark:border-gray-600 dark:bg-gray-700"
+                  placeholder="Ej: 2604123456"
+                />
+                <p className="text-xs text-gray-400 mt-1">Sin el 0 ni el 15. Se usará para WhatsApp.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Dirección</label>
+                <input
+                  type="text"
+                  value={editForm.direccion}
+                  onChange={(e) => setEditForm({ ...editForm, direccion: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border dark:border-gray-600 dark:bg-gray-700"
+                  placeholder="Dirección (opcional)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Observaciones</label>
+                <textarea
+                  value={editForm.observaciones}
+                  onChange={(e) => setEditForm({ ...editForm, observaciones: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border dark:border-gray-600 dark:bg-gray-700 resize-none"
+                  rows={2}
+                  placeholder="Observaciones (opcional)"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button type="button" onClick={() => setEditModal(false)}
+                className="flex-1 py-3 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700">
+                Cancelar
+              </button>
+              <button onClick={handleEdit} disabled={!editForm.nombre.trim()}
+                className="flex-1 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 disabled:opacity-50">
+                Guardar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
