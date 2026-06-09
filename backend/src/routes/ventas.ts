@@ -226,18 +226,15 @@ router.patch('/:id/anular', requireWriteAccess, async (req: Request, res: Respon
       return res.status(400).json({ message: 'La venta ya está anulada' });
     }
 
-    const pagosResult = await query('SELECT COUNT(*)::int as count FROM pagos WHERE venta_id = $1', [id]);
-    const pagosCount = pagosResult.rows[0]?.count || 0;
-    const pagado = parseFloat(String(venta.pagado)) || 0;
-
-    if (pagosCount > 0 || pagado > 0) {
-      return res.status(400).json({ message: 'No se puede anular una venta con pagos registrados' });
-    }
-
     // El saldo pendiente de esta venta que hay que devolver al cliente
     const saldoVenta = parseFloat(String(venta.saldo)) || 0;
+    // El monto ya pagado que hay que devolver también al saldo del cliente
+    // (porque esos pagos quedarán huérfanos al anular — el dinero ya fue cobrado
+    //  pero el cliente recupera el crédito en cuenta corriente)
+    const pagadoVenta = parseFloat(String(venta.pagado)) || 0;
 
     const updatedVenta = await withTransaction(async (tx) => {
+      // Marcar la venta como anulada
       const updated = await tx(
         `UPDATE ventas
          SET is_void = true,
@@ -245,14 +242,16 @@ router.patch('/:id/anular', requireWriteAccess, async (req: Request, res: Respon
              voided_by = $2,
              void_reason = $3,
              saldo = 0,
-             estado = 'pagada',
+             estado = 'anulada',
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1
          RETURNING *`,
         [id, req.user!.id, motivo || null]
       );
 
-      // Restar del saldo del cliente el saldo que tenía esta venta
+      // Restar del saldo del cliente únicamente el saldo pendiente que aportaba
+      // esta venta (lo que aún no pagó). Lo que ya pagó no afecta clientes.saldo
+      // porque nunca lo sumó (solo se suma el saldo al crear la venta).
       if (saldoVenta > 0) {
         await tx(
           `UPDATE clientes
@@ -264,7 +263,7 @@ router.patch('/:id/anular', requireWriteAccess, async (req: Request, res: Respon
 
       await tx(
         'INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
-        [req.user!.id, 'VOID', 'venta', id, JSON.stringify({ total: updated.rows[0]?.total, motivo: motivo || null })]
+        [req.user!.id, 'VOID', 'venta', id, JSON.stringify({ total: updated.rows[0]?.total, pagado: pagadoVenta, motivo: motivo || null })]
       );
 
       return updated.rows[0];
@@ -291,18 +290,14 @@ router.delete('/:id', requireRole('admin'), async (req: Request, res: Response) 
     }
 
     const venta = ventaResult.rows[0];
-    const pagosResult = await query('SELECT COUNT(*)::int as count FROM pagos WHERE venta_id = $1', [id]);
-    const pagosCount = pagosResult.rows[0]?.count || 0;
-    const pagado = parseFloat(String(venta.pagado)) || 0;
-
-    if (pagosCount > 0 || pagado > 0) {
-      return res.status(400).json({ message: 'No se puede eliminar una venta con pagos registrados' });
-    }
 
     // Saldo que esta venta aportaba al cliente (0 si ya estaba anulada)
     const saldoVenta = venta.is_void ? 0 : (parseFloat(String(venta.saldo)) || 0);
 
     const deletedVenta = await withTransaction(async (tx) => {
+      // Eliminar pagos asociados primero (FK constraint)
+      await tx('DELETE FROM pagos WHERE venta_id = $1', [id]);
+
       const result = await tx('DELETE FROM ventas WHERE id = $1 RETURNING *', [id]);
 
       // Devolver al cliente el saldo que esta venta tenía pendiente
