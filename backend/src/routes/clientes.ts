@@ -182,17 +182,46 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
       return res.status(404).json({ message: 'Cliente no encontrado' });
     }
 
-    if (clienteResult.rows[0].saldo < monto) {
+    if (parseFloat(clienteResult.rows[0].saldo) < monto) {
       return res.status(400).json({ message: 'El pago excede el saldo del cliente' });
     }
 
+    // Todo en una transacción para mantener consistencia
+    await query('BEGIN');
+
+    // 1. Insertar el pago
     const result = await query(
       'INSERT INTO pagos (cliente_id, venta_id, monto, metodo, observaciones, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [id, venta_id || null, monto, metodo || 'efectivo', observaciones, req.user!.id]
     );
 
+    // 2. Si viene con venta_id, actualizar pagado/saldo de esa venta
+    if (venta_id) {
+      await query(
+        `UPDATE ventas
+         SET pagado = LEAST(pagado + $1, total),
+             saldo  = GREATEST(saldo  - $1, 0),
+             estado = CASE WHEN GREATEST(saldo - $1, 0) <= 0 THEN 'pagado' ELSE estado END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [monto, venta_id]
+      );
+    }
+
+    // 3. Actualizar saldo del cliente
+    await query(
+      `UPDATE clientes
+       SET saldo = GREATEST(saldo - $1, 0),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [monto, id]
+    );
+
+    await query('COMMIT');
+
     res.status(201).json({ pago: result.rows[0] });
   } catch (error) {
+    await query('ROLLBACK');
     res.status(500).json({ message: 'Error del servidor' });
   }
 });
