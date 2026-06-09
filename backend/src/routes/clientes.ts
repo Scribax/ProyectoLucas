@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { query } from '../config/database';
+import { query, withTransaction } from '../config/database';
 import { authenticateJWT, requireRole, requireWriteAccess } from '../middleware/auth';
 
 const router = Router();
@@ -186,42 +186,42 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
       return res.status(400).json({ message: 'El pago excede el saldo del cliente' });
     }
 
-    // Todo en una transacción para mantener consistencia
-    await query('BEGIN');
+    // Todo en una transacción para mantener consistencia (un único cliente del pool)
+    const pago = await withTransaction(async (tx) => {
+      // 1. Insertar el pago
+      const result = await tx(
+        'INSERT INTO pagos (cliente_id, venta_id, monto, metodo, observaciones, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [id, venta_id || null, monto, metodo || 'efectivo', observaciones, req.user!.id]
+      );
 
-    // 1. Insertar el pago
-    const result = await query(
-      'INSERT INTO pagos (cliente_id, venta_id, monto, metodo, observaciones, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [id, venta_id || null, monto, metodo || 'efectivo', observaciones, req.user!.id]
-    );
+      // 2. Si viene con venta_id, actualizar pagado/saldo de esa venta
+      if (venta_id) {
+        await tx(
+          `UPDATE ventas
+           SET pagado = LEAST(pagado + $1, total),
+               saldo  = GREATEST(saldo  - $1, 0),
+               estado = CASE WHEN GREATEST(saldo - $1, 0) <= 0 THEN 'pagada' ELSE estado END,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2`,
+          [monto, venta_id]
+        );
+      }
 
-    // 2. Si viene con venta_id, actualizar pagado/saldo de esa venta
-    if (venta_id) {
-      await query(
-        `UPDATE ventas
-         SET pagado = LEAST(pagado + $1, total),
-             saldo  = GREATEST(saldo  - $1, 0),
-             estado = CASE WHEN GREATEST(saldo - $1, 0) <= 0 THEN 'pagado' ELSE estado END,
+      // 3. Actualizar saldo del cliente
+      await tx(
+        `UPDATE clientes
+         SET saldo = GREATEST(saldo - $1, 0),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $2`,
-        [monto, venta_id]
+        [monto, id]
       );
-    }
 
-    // 3. Actualizar saldo del cliente
-    await query(
-      `UPDATE clientes
-       SET saldo = GREATEST(saldo - $1, 0),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [monto, id]
-    );
+      return result.rows[0];
+    });
 
-    await query('COMMIT');
-
-    res.status(201).json({ pago: result.rows[0] });
+    res.status(201).json({ pago });
   } catch (error) {
-    await query('ROLLBACK');
+    console.error('Error en POST /clientes/:id/pagos:', error);
     res.status(500).json({ message: 'Error del servidor' });
   }
 });
