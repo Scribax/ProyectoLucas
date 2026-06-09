@@ -19,6 +19,9 @@ echo -e "${BLUE}🔄 Actualización de Granja Avícola${NC}"
 echo "================================"
 echo ""
 
+# 0. Asegurar permisos de scripts
+chmod +x $COMPOSE_DIR/scripts/*.sh
+
 # 1. Backup de seguridad
 echo -e "${YELLOW}📦 Paso 1: Creando backup de seguridad...${NC}"
 $COMPOSE_DIR/scripts/backup.sh pre_update_$(date +%Y%m%d)
