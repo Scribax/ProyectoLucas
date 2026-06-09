@@ -30,7 +30,10 @@ $COMPOSE_DIR/scripts/backup.sh pre_update_$(date +%Y%m%d)
 if [ -d "$COMPOSE_DIR/.git" ]; then
     echo -e "${YELLOW}📥 Paso 2: Descargando actualizaciones...${NC}"
     cd $COMPOSE_DIR
-    git pull origin main || git pull origin master || echo "No hay cambios nuevos"
+    git reset --hard HEAD
+    git pull origin main || echo "No hay cambios nuevos"
+    # Re-asegurar permisos post-pull (git pull puede quitar el +x igual que reset)
+    chmod +x $COMPOSE_DIR/scripts/*.sh
 fi
 
 # 3. Detener servicios (excepto DB)
