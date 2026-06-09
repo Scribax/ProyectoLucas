@@ -7,12 +7,23 @@ import DashboardLayout from '@/components/DashboardLayout';
 import {
   ArrowLeft, Phone, MapPin, DollarSign, CreditCard, CheckCircle,
   User, Calendar, FileText, Trash2, Download, Ban, ChevronDown, ChevronUp,
-  TrendingUp, ShoppingBag, Clock, AlertTriangle
+  TrendingUp, ShoppingBag, Clock, AlertTriangle, MessageCircle
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+const buildWhatsAppUrl = (telefono: string, nombre: string, saldo: number) => {
+  let num = telefono.replace(/[\s\-\(\)\+]/g, '');
+  if (num.startsWith('0')) num = num.slice(1);
+  if (!num.startsWith('549') && !num.startsWith('54')) num = '549' + num;
+  else if (num.startsWith('54') && !num.startsWith('549')) num = '549' + num.slice(2);
+  const mensaje = saldo > 0
+    ? `Hola ${nombre}, te informamos que tenés un saldo pendiente de $${Number(saldo).toLocaleString()} con Granja Avícola. Cualquier consulta estamos a disposición. 🐣`
+    : `Hola ${nombre}, te informamos que tu cuenta con Granja Avícola está al día. ¡Gracias por tu pago! 🐣`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}`;
+};
 
 const SIZE_LABELS: Record<string, string> = {
   S: 'Chico', M: 'Mediano', L: 'Grande', XL: 'Extra Grande',
@@ -218,7 +229,17 @@ export default function ClienteDetallePage() {
               <div>
                 <h3 className="text-xl font-semibold">{cliente.nombre}</h3>
                 <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-                  {cliente.telefono && <span className="flex items-center gap-1"><Phone className="w-4 h-4" />{cliente.telefono}</span>}
+                  {cliente.telefono && (
+                    <a
+                      href={buildWhatsAppUrl(cliente.telefono, cliente.nombre, cliente.saldo)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-green-600 hover:text-green-700 transition-colors"
+                      title="Abrir WhatsApp"
+                    >
+                      <MessageCircle className="w-4 h-4" />{cliente.telefono}
+                    </a>
+                  )}
                   {cliente.direccion && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{cliente.direccion}</span>}
                 </div>
                 {cliente.observaciones && <p className="text-sm text-gray-400 mt-2">{cliente.observaciones}</p>}

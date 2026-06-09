@@ -3,11 +3,27 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Users, Plus, Search, Phone, MapPin, DollarSign, Eye, Trash2 } from 'lucide-react';
+import { Users, Plus, Search, Phone, MapPin, DollarSign, Eye, Trash2, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+const buildWhatsAppUrl = (telefono: string, nombre: string, saldo: number) => {
+  // Limpiar el número: quitar espacios, guiones, paréntesis, +
+  let num = telefono.replace(/[\s\-\(\)\+]/g, '');
+  // Si empieza con 0, sacar el 0
+  if (num.startsWith('0')) num = num.slice(1);
+  // Si no empieza con 549 ni 54, agregar 549
+  if (!num.startsWith('549') && !num.startsWith('54')) num = '549' + num;
+  else if (num.startsWith('54') && !num.startsWith('549')) num = '549' + num.slice(2);
+
+  const mensaje = saldo > 0
+    ? `Hola ${nombre}, te informamos que tenés un saldo pendiente de $${Number(saldo).toLocaleString()} con Granja Avícola. Cualquier consulta estamos a disposición. 🐣`
+    : `Hola ${nombre}, te informamos que tu cuenta con Granja Avícola está al día. ¡Gracias por tu pago! 🐣`;
+
+  return `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}`;
+};
 
 interface Cliente {
   id: string;
@@ -160,7 +176,28 @@ export default function ClientesPage() {
                     {c.saldo > 0 ? `$${c.saldo.toLocaleString()}` : 'Al día'}
                   </div>
                   {c.saldo > 0 && <p className="text-xs text-red-400">Saldo pendiente</p>}
-                  <div className="mt-3 flex justify-end">
+                  <div className="mt-3 flex justify-end gap-2">
+                    {c.telefono ? (
+                      <a
+                        href={buildWhatsAppUrl(c.telefono, c.nombre, c.saldo)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-xl border border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600"
+                        title="Enviar WhatsApp"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className="p-2 rounded-xl border border-gray-200 dark:border-gray-600 opacity-30 cursor-not-allowed"
+                        title="Sin teléfono cargado"
+                      >
+                        <MessageCircle className="w-4 h-4 text-gray-400" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteCliente(c); }}
@@ -200,8 +237,10 @@ export default function ClientesPage() {
                   type="tel"
                   value={form.telefono}
                   onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                  placeholder="Ej: 2604123456 o 5492604123456"
                   className="w-full px-4 py-2 rounded-xl border dark:border-gray-600 dark:bg-gray-700"
                 />
+                <p className="text-xs text-gray-400 mt-1">Sin el 0 ni el 15. Se usará para WhatsApp.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Dirección</label>
