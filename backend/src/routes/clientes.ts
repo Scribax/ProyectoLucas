@@ -181,9 +181,21 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
     if (clienteResult.rows.length === 0) {
       return res.status(404).json({ message: 'Cliente no encontrado' });
     }
-
     if (parseFloat(clienteResult.rows[0].saldo) < monto) {
       return res.status(400).json({ message: 'El pago excede el saldo del cliente' });
+    }
+
+    // Si viene con venta_id, verificar que el monto no supere el saldo real de esa venta
+    // (evita acumular sobre ventas.pagado cuando ya tenía un pago parcial al crearse)
+    if (venta_id) {
+      const ventaCheck = await query('SELECT saldo FROM ventas WHERE id = $1 AND is_void = false', [venta_id]);
+      if (ventaCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Factura no encontrada' });
+      }
+      const saldoVenta = parseFloat(ventaCheck.rows[0].saldo);
+      if (monto > saldoVenta) {
+        return res.status(400).json({ message: `El pago ($${monto}) supera el saldo de la factura ($${saldoVenta})` });
+      }
     }
 
     // Todo en una transacción para mantener consistencia (un único cliente del pool)
@@ -196,11 +208,16 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
 
       // 2. Si viene con venta_id, actualizar pagado/saldo de esa venta
       if (venta_id) {
+        // Usamos saldo - $1 directamente (ya validamos que monto <= saldo arriba)
+        // así evitamos el problema de LEAST(pagado + monto, total) que se desbordaba
+        // cuando la venta fue creada con un pago inicial no registrado en pagos
         await tx(
           `UPDATE ventas
-           SET pagado = LEAST(pagado + $1, total),
-               saldo  = GREATEST(saldo  - $1, 0),
-               estado = CASE WHEN GREATEST(saldo - $1, 0) <= 0 THEN 'pagada' ELSE estado END,
+           SET pagado     = total - GREATEST(saldo - $1, 0),
+               saldo      = GREATEST(saldo - $1, 0),
+               estado     = CASE WHEN GREATEST(saldo - $1, 0) <= 0 THEN 'pagada'
+                                 WHEN pagado > 0 OR $1 > 0 THEN 'parcial'
+                                 ELSE estado END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2`,
           [monto, venta_id]
@@ -210,7 +227,7 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
       // 3. Actualizar saldo del cliente
       await tx(
         `UPDATE clientes
-         SET saldo = GREATEST(saldo - $1, 0),
+         SET saldo      = GREATEST(saldo - $1, 0),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $2`,
         [monto, id]

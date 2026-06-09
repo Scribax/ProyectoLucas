@@ -174,6 +174,17 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
         );
       }
 
+      // Si hay un pago inicial al crear la venta, registrarlo en pagos
+      // (sin esto, un pago parcial al crear queda "invisible" y el próximo pago
+      //  se acumula sobre el pagado existente, desbordando ventas.pagado)
+      if (montoPagado > 0) {
+        await tx(
+          `INSERT INTO pagos (cliente_id, venta_id, monto, metodo, observaciones, created_by)
+           VALUES ($1, $2, $3, 'efectivo', 'Pago al contado al crear la venta', $4)`,
+          [cliente_id, ventaId, montoPagado, req.user!.id]
+        );
+      }
+
       // Actualizar saldo del cliente sumando el saldo pendiente de esta venta
       if (saldo > 0) {
         await tx(
