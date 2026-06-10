@@ -184,6 +184,9 @@ export default function ClienteDetallePage() {
         <div class="footer"><p>Gracias por su compra!</p></div>
         <button onclick="window.print()" style="width:100%;padding:15px;background:#eab308;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:20px">
           Imprimir / Guardar PDF
+        </button>
+        <button onclick="window.close()" style="width:100%;padding:15px;background:#6b7280;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:10px">
+          ← Volver
         </button></body></html>`;
 
       // Usamos Blob URL en lugar de window.open + document.write
