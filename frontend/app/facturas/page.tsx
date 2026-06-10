@@ -73,57 +73,69 @@ export default function FacturasPage() {
     } finally { setVoidSaving(false); }
   };
 
-  const downloadInvoice = (venta: any) => {
-    const getEggFriendlyName = (size?: string) => size ? `Huevo ${SIZE_LABELS[size] || size}` : 'Artículo';
-    const itemsHtml = venta.items?.map((item: any) =>
-      `<tr><td>${item.descripcion || item.articulo_nombre || getEggFriendlyName(item.size)}</td><td>${item.cantidad}</td><td>$${item.precio_unitario}</td><td>$${item.subtotal}</td></tr>`
-    ).join('') || '';
-    const voidBanner = venta.is_void ? `
-      <div style="background:#fef2f2;border:2px solid #ef4444;padding:12px;text-align:center;margin-bottom:20px;border-radius:8px;">
-        <span style="color:#dc2626;font-weight:bold;font-size:18px;">FACTURA ANULADA</span>
-        ${venta.void_reason ? `<p style="color:#dc2626;margin:6px 0 0;font-size:14px;">Motivo: ${venta.void_reason}</p>` : ''}
-      </div>` : '';
+  const downloadInvoice = async (ventaResumen: any) => {
+    try {
+      // Cargar la venta completa con items desde el backend
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/ventas/${ventaResumen.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const venta = res.data?.venta;
+      if (!venta) { toast.error('No se pudo cargar la factura'); return; }
 
-    const html = `<!DOCTYPE html><html><head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Factura #${venta.id?.slice(0, 8)}</title>
-      <style>
-        body{font-family:Arial,sans-serif;padding:40px;max-width:600px;margin:0 auto}
-        .header{text-align:center;border-bottom:3px solid #eab308;padding-bottom:20px;margin-bottom:20px}
-        .header h1{margin:0;color:#333}.header p{color:#666;margin:5px 0}
-        table{width:100%;border-collapse:collapse;margin:20px 0}
-        th,td{padding:10px;text-align:left;border-bottom:1px solid #ddd}
-        th{background:#f5f5f5}.total{font-size:24px;font-weight:bold;text-align:right;margin-top:20px}
-        .footer{text-align:center;margin-top:40px;color:#666;font-size:14px}
-        @media print{button{display:none}}
-      </style></head><body>
-      ${voidBanner}
-      <div class="header"><h1>GRANJA AVICOLA</h1><p>Factura de Venta</p><p>#${venta.id?.slice(0, 8)}</p></div>
-      <p><strong>Cliente:</strong> ${venta.cliente_nombre}</p>
-      <p><strong>Fecha:</strong> ${format(parseISO(venta.fecha), 'dd/MM/yyyy HH:mm')}</p>
-      <table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
-      <tbody>${itemsHtml}</tbody></table>
-      <div class="total">TOTAL: $${venta.total?.toLocaleString()}<br>
-        <span style="font-size:16px">Pagado: $${venta.pagado?.toLocaleString()}</span><br>
-        ${venta.saldo > 0 && !venta.is_void ? `<span style="font-size:16px;color:red">Saldo: $${venta.saldo?.toLocaleString()}</span>` : ''}
-      </div>
-      <div class="footer"><p>Gracias por su compra!</p></div>
-      <button onclick="window.print()" style="width:100%;padding:15px;background:#eab308;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:20px">
-        Imprimir / Guardar PDF
-      </button>
-      <button onclick="window.close()" style="width:100%;padding:15px;background:#6b7280;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:10px">
-        ← Volver
-      </button></body></html>`;
+      const getEggFriendlyName = (size?: string) => size ? `Huevo ${SIZE_LABELS[size] || size}` : 'Artículo';
+      const itemsHtml = venta.items?.map((item: any) =>
+        `<tr><td>${item.descripcion || item.articulo_nombre || getEggFriendlyName(item.size)}</td><td>${item.cantidad}</td><td>$${Number(item.precio_unitario).toLocaleString()}</td><td>$${Number(item.subtotal).toLocaleString()}</td></tr>`
+      ).join('') || '';
 
-    // Blob URL en lugar de window.open + document.write — compatible con Safari/iOS
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const newWindow = window.open(url, '_blank');
-    if (newWindow) {
-      newWindow.addEventListener('load', () => URL.revokeObjectURL(url));
-    } else {
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      const voidBanner = venta.is_void ? `
+        <div style="background:#fef2f2;border:2px solid #ef4444;padding:12px;text-align:center;margin-bottom:20px;border-radius:8px;">
+          <span style="color:#dc2626;font-weight:bold;font-size:18px;">FACTURA ANULADA</span>
+          ${venta.void_reason ? `<p style="color:#dc2626;margin:6px 0 0;font-size:14px;">Motivo: ${venta.void_reason}</p>` : ''}
+        </div>` : '';
+
+      const html = `<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Factura #${venta.id?.slice(0, 8)}</title>
+        <style>
+          body{font-family:Arial,sans-serif;padding:40px;max-width:600px;margin:0 auto}
+          .header{text-align:center;border-bottom:3px solid #eab308;padding-bottom:20px;margin-bottom:20px}
+          .header h1{margin:0;color:#333}.header p{color:#666;margin:5px 0}
+          table{width:100%;border-collapse:collapse;margin:20px 0}
+          th,td{padding:10px;text-align:left;border-bottom:1px solid #ddd}
+          th{background:#f5f5f5}.total{font-size:24px;font-weight:bold;text-align:right;margin-top:20px}
+          .footer{text-align:center;margin-top:40px;color:#666;font-size:14px}
+          @media print{button{display:none}}
+        </style></head><body>
+        ${voidBanner}
+        <div class="header"><h1>GRANJA AVICOLA</h1><p>Factura de Venta</p><p>#${venta.id?.slice(0, 8)}</p></div>
+        <p><strong>Cliente:</strong> ${venta.cliente_nombre}</p>
+        <p><strong>Fecha:</strong> ${format(parseISO(venta.fecha), 'dd/MM/yyyy HH:mm')}</p>
+        <table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
+        <tbody>${itemsHtml}</tbody></table>
+        <div class="total">TOTAL: $${Number(venta.total || 0).toLocaleString()}<br>
+          <span style="font-size:16px">Pagado: $${Number(venta.pagado || 0).toLocaleString()}</span><br>
+          ${(Number(venta.saldo) || 0) > 0 && !venta.is_void ? `<span style="font-size:16px;color:red">Saldo: $${Number(venta.saldo || 0).toLocaleString()}</span>` : ''}
+        </div>
+        <div class="footer"><p>Gracias por su compra!</p></div>
+        <button onclick="window.print()" style="width:100%;padding:15px;background:#eab308;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:20px">
+          Imprimir / Guardar PDF
+        </button>
+        <button onclick="window.close()" style="width:100%;padding:15px;background:#6b7280;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:10px">
+          ← Volver
+        </button></body></html>`;
+
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.addEventListener('load', () => URL.revokeObjectURL(url));
+      } else {
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Error cargando factura');
     }
   };
 
