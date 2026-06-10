@@ -224,14 +224,9 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
         );
       }
 
-      // 3. Actualizar saldo del cliente
-      await tx(
-        `UPDATE clientes
-         SET saldo      = GREATEST(saldo - $1, 0),
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $2`,
-        [monto, id]
-      );
+      // NOTA: no actualizamos clientes.saldo manualmente aquí.
+      // El trigger trigger_procesar_pago en Postgres lo hace automáticamente
+      // al INSERT en pagos. Hacerlo también acá causaba que el saldo quedara x2.
 
       return result.rows[0];
     });

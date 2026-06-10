@@ -185,15 +185,9 @@ router.post('/', requireWriteAccess, async (req: Request, res: Response) => {
         );
       }
 
-      // Actualizar saldo del cliente sumando el saldo pendiente de esta venta
-      if (saldo > 0) {
-        await tx(
-          `UPDATE clientes
-           SET saldo = saldo + $1, updated_at = CURRENT_TIMESTAMP
-           WHERE id = $2`,
-          [saldo, cliente_id]
-        );
-      }
+      // NOTA: no actualizamos clientes.saldo manualmente aquí.
+      // El trigger trigger_actualizar_saldo_venta en Postgres lo hace automáticamente
+      // al INSERT en ventas. Hacerlo también acá causaba que el saldo quedara x2.
 
       return ventaResult.rows[0];
     });
