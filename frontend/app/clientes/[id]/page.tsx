@@ -144,19 +144,22 @@ export default function ClienteDetallePage() {
       });
       const venta = res.data?.venta;
       if (!venta) { toast.error('No se pudo cargar la factura'); return; }
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
+
       const itemsHtml = (venta.items || []).map((item: any) => {
         const nombre = item.descripcion || item.articulo_nombre ||
           (item.size ? `Huevo ${SIZE_LABELS[item.size] || item.size}` : 'Articulo');
         return `<tr><td>${escapeHtml(nombre)}</td><td>${escapeHtml(item.cantidad)}</td><td>$${escapeHtml(item.precio_unitario)}</td><td>$${escapeHtml(item.subtotal)}</td></tr>`;
       }).join('');
+
       const voidBanner = venta.is_void ? `
         <div style="background:#fef2f2;border:2px solid #ef4444;padding:12px;text-align:center;margin-bottom:20px;border-radius:8px;">
           <span style="color:#dc2626;font-weight:bold;font-size:18px;">FACTURA ANULADA</span>
           ${venta.void_reason ? `<p style="color:#dc2626;margin:6px 0 0;font-size:14px;">Motivo: ${escapeHtml(venta.void_reason)}</p>` : ''}
         </div>` : '';
-      printWindow.document.write(`<!DOCTYPE html><html><head>
+
+      const html = `<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Factura #${escapeHtml(venta.id?.slice(0, 8))}</title>
         <style>
           body{font-family:Arial,sans-serif;padding:40px;max-width:700px;margin:0 auto}
@@ -181,8 +184,20 @@ export default function ClienteDetallePage() {
         <div class="footer"><p>Gracias por su compra!</p></div>
         <button onclick="window.print()" style="width:100%;padding:15px;background:#eab308;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:20px">
           Imprimir / Guardar PDF
-        </button></body></html>`);
-      printWindow.document.close();
+        </button></body></html>`;
+
+      // Usamos Blob URL en lugar de window.open + document.write
+      // Esto es compatible con Safari/iOS que bloquea about:blank con document.write
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const newWindow = window.open(url, '_blank');
+
+      // Liberar la URL del blob cuando la ventana cargue (o tras 60s como fallback)
+      if (newWindow) {
+        newWindow.addEventListener('load', () => URL.revokeObjectURL(url));
+      } else {
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Error cargando factura');
     }

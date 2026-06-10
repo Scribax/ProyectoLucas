@@ -74,8 +74,6 @@ export default function FacturasPage() {
   };
 
   const downloadInvoice = (venta: any) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
     const getEggFriendlyName = (size?: string) => size ? `Huevo ${SIZE_LABELS[size] || size}` : 'Artículo';
     const itemsHtml = venta.items?.map((item: any) =>
       `<tr><td>${item.descripcion || item.articulo_nombre || getEggFriendlyName(item.size)}</td><td>${item.cantidad}</td><td>$${item.precio_unitario}</td><td>$${item.subtotal}</td></tr>`
@@ -85,7 +83,10 @@ export default function FacturasPage() {
         <span style="color:#dc2626;font-weight:bold;font-size:18px;">FACTURA ANULADA</span>
         ${venta.void_reason ? `<p style="color:#dc2626;margin:6px 0 0;font-size:14px;">Motivo: ${venta.void_reason}</p>` : ''}
       </div>` : '';
-    printWindow.document.write(`<!DOCTYPE html><html><head>
+
+    const html = `<!DOCTYPE html><html><head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Factura #${venta.id?.slice(0, 8)}</title>
       <style>
         body{font-family:Arial,sans-serif;padding:40px;max-width:600px;margin:0 auto}
@@ -110,8 +111,17 @@ export default function FacturasPage() {
       <div class="footer"><p>Gracias por su compra!</p></div>
       <button onclick="window.print()" style="width:100%;padding:15px;background:#eab308;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:20px">
         Imprimir / Guardar PDF
-      </button></body></html>`);
-    printWindow.document.close();
+      </button></body></html>`;
+
+    // Blob URL en lugar de window.open + document.write — compatible con Safari/iOS
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const newWindow = window.open(url, '_blank');
+    if (newWindow) {
+      newWindow.addEventListener('load', () => URL.revokeObjectURL(url));
+    } else {
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    }
   };
 
   return (
