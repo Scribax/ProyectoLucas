@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { query, withTransaction } from '../config/database';
+import { query, withTransaction, recalcularSaldoCliente } from '../config/database';
 import { authenticateJWT, requireRole, requireWriteAccess } from '../middleware/auth';
 
 const router = Router();
@@ -26,6 +26,40 @@ router.get('/', async (req: Request, res: Response) => {
     const result = await query(sql, params);
     res.json({ clientes: result.rows });
   } catch (error) {
+    res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
+// Diagnóstico: clientes cuyo saldo guardado NO coincide con el saldo canónico.
+// Útil para verificar tras un deploy que todo cuadra. Solo admin.
+// NOTA: va ANTES de GET /:id para que la ruta no sea capturada como un id.
+router.get('/diagnostico/saldos', requireRole('admin'), async (_req: Request, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT c.id, c.nombre,
+             c.saldo AS saldo_guardado,
+             GREATEST(
+               COALESCE((SELECT SUM(v.total) FROM ventas v
+                         WHERE v.cliente_id = c.id AND v.is_void = false), 0)
+               - COALESCE((SELECT SUM(p.monto) FROM pagos p
+                           LEFT JOIN ventas v ON p.venta_id = v.id
+                           WHERE p.cliente_id = c.id
+                             AND (p.venta_id IS NULL OR v.is_void = false)), 0),
+               0
+             ) AS saldo_calculado
+      FROM clientes c
+      WHERE c.is_active = true
+    `);
+    const descuadrados = result.rows.filter(
+      (r: any) => Math.abs(parseFloat(r.saldo_guardado) - parseFloat(r.saldo_calculado)) > 0.01
+    );
+    res.json({
+      total_clientes: result.rows.length,
+      descuadrados: descuadrados.length,
+      detalle: descuadrados,
+    });
+  } catch (error) {
+    console.error('Error en GET /clientes/diagnostico/saldos:', error);
     res.status(500).json({ message: 'Error del servidor' });
   }
 });
@@ -206,27 +240,33 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
         [id, venta_id || null, monto, metodo || 'efectivo', observaciones, req.user!.id]
       );
 
-      // 2. Si viene con venta_id, actualizar pagado/saldo de esa venta
+      // 2. Si el pago es de una factura puntual, recalcular pagado/saldo/estado
+      //    de ESA venta a partir de la suma real de sus pagos (no acumulando
+      //    a ciegas, para no inflar ventas.pagado).
       if (venta_id) {
-        // Usamos saldo - $1 directamente (ya validamos que monto <= saldo arriba)
-        // así evitamos el problema de LEAST(pagado + monto, total) que se desbordaba
-        // cuando la venta fue creada con un pago inicial no registrado en pagos
         await tx(
-          `UPDATE ventas
-           SET pagado     = total - GREATEST(saldo - $1, 0),
-               saldo      = GREATEST(saldo - $1, 0),
-               estado     = CASE WHEN GREATEST(saldo - $1, 0) <= 0 THEN 'pagada'
-                                 WHEN pagado > 0 OR $1 > 0 THEN 'parcial'
-                                 ELSE estado END,
+          `UPDATE ventas v
+           SET pagado = pr.total_pagado,
+               saldo  = GREATEST(v.total - pr.total_pagado, 0),
+               estado = CASE
+                 WHEN GREATEST(v.total - pr.total_pagado, 0) <= 0 THEN 'pagada'
+                 WHEN pr.total_pagado > 0 THEN 'parcial'
+                 ELSE 'pendiente'
+               END,
                updated_at = CURRENT_TIMESTAMP
-           WHERE id = $2`,
-          [monto, venta_id]
+           FROM (
+             SELECT COALESCE(SUM(monto), 0) AS total_pagado
+             FROM pagos WHERE venta_id = $1
+           ) pr
+           WHERE v.id = $1`,
+          [venta_id]
         );
       }
 
-      // NOTA: no actualizamos clientes.saldo manualmente aquí.
-      // El trigger trigger_procesar_pago en Postgres lo hace automáticamente
-      // al INSERT en pagos. Hacerlo también acá causaba que el saldo quedara x2.
+      // 3. Recalcular el saldo del cliente desde la única fuente de verdad.
+      //    (Reemplaza tanto los triggers de Postgres como los updates manuales
+      //     que causaban el saldo duplicado / desactualizado.)
+      await recalcularSaldoCliente(tx, id);
 
       return result.rows[0];
     });

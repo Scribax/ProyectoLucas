@@ -10,6 +10,13 @@ RUN npm ci
 # Copiar código fuente
 COPY . .
 
+# URL del API horneada en el bundle del cliente (NEXT_PUBLIC_* se resuelve en build).
+# Por defecto relativa "/api" para que el navegador llame al MISMO dominio
+# (https://tudominio/api) y nginx la proxee; así no queda "localhost" hardcodeado
+# ni se rompe por mixed-content en producción.
+ARG NEXT_PUBLIC_API_URL=/api
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Build
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build

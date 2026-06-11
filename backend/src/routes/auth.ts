@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/database';
-import { generateToken } from '../middleware/auth';
+import { generateToken, authenticateJWT } from '../middleware/auth';
 
 const router = Router();
 
@@ -73,9 +73,8 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 // Obtener usuario actual
-router.get('/me', async (req: Request, res: Response) => {
+router.get('/me', authenticateJWT, async (req: Request, res: Response) => {
   try {
-    // Este endpoint requiere autenticación, implementado en index.ts
     if (!req.user) {
       return res.status(401).json({ message: 'No autenticado' });
     }
@@ -98,7 +97,7 @@ router.get('/me', async (req: Request, res: Response) => {
 });
 
 // Cambiar contraseña (solo propio)
-router.post('/change-password', async (req: Request, res: Response) => {
+router.post('/change-password', authenticateJWT, async (req: Request, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'No autenticado' });

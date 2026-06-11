@@ -1,0 +1,8 @@
+node_modules
+.next
+# .env.local apunta a localhost:3001 (solo para `npm run dev`). No debe entrar al
+# build de Docker: ahí la URL del API la define el ARG NEXT_PUBLIC_API_URL (/api).
+.env.local
+npm-debug.log
+Dockerfile
+.dockerignore

@@ -23,18 +23,27 @@ import produccionRoutes from './routes/produccion';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Estamos detrás de nginx (1 proxy). Sin esto, express-rate-limit ve la IP del
+// proxy para TODOS los usuarios y comparten el mismo cupo → "Demasiadas
+// peticiones" apenas se usa la app. Con trust proxy usa X-Forwarded-For real.
+app.set('trust proxy', 1);
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // 100 requests por IP
-  message: 'Demasiadas peticiones, intente más tarde'
+  max: 1000, // 1000 requests por IP (un dashboard dispara varias llamadas a la vez)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Demasiadas peticiones, intente más tarde' },
+  // No limitar el health check (lo consulta el monitoreo / docker)
+  skip: (req) => req.path === '/health',
 });
 
 // Middleware
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['http://localhost', 'https://localhost', 'https://donlucasproyect.com']
+    ? ['http://localhost', 'https://localhost', 'https://donlucasproyect.com', 'https://www.donlucasproyect.com']
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }));
@@ -61,12 +70,102 @@ app.use('/api/gastos', gastosRoutes);
 app.use('/api/articulos', articulosRoutes);
 app.use('/api/produccion', produccionRoutes);
 
+/**
+ * Aplica de forma idempotente todas las migraciones de esquema y la corrección
+ * de datos en cada arranque. Esto reemplaza tener que correr los fix_*.sql a
+ * mano en el VPS: el estado de la base queda determinista después de cada deploy.
+ *
+ * IMPORTANTE: el saldo de los clientes es responsabilidad EXCLUSIVA del backend
+ * (ver recalcularSaldoCliente). Por eso aquí se eliminan los triggers de Postgres
+ * que históricamente actualizaban clientes.saldo y ventas.pagado en paralelo y
+ * causaban el "saldo x2" y los descuadres.
+ */
 const ensureSchema = async () => {
+  // --- Columnas para anulación de ventas (soft void) ---
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS is_void BOOLEAN NOT NULL DEFAULT false`);
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS voided_at TIMESTAMP WITH TIME ZONE`);
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS voided_by UUID`);
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS void_reason TEXT`);
   await query(`CREATE INDEX IF NOT EXISTS idx_ventas_is_void ON ventas(is_void)`);
+
+  // --- Columnas de saldo acumulado por venta (migrate_v2) ---
+  await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS saldo_anterior DECIMAL(12,2) DEFAULT 0`);
+  await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS saldo_acumulado DECIMAL(12,2) DEFAULT 0`);
+
+  // --- Tabla articulos (puede no existir en bases viejas) ---
+  await query(`CREATE TABLE IF NOT EXISTS articulos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre VARCHAR(100) UNIQUE NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // --- venta_items: artículos no-huevo (size nullable + articulo_id + descripcion) ---
+  await query(`ALTER TABLE venta_items ALTER COLUMN size DROP NOT NULL`);
+  await query(`ALTER TABLE venta_items ADD COLUMN IF NOT EXISTS articulo_id UUID REFERENCES articulos(id) ON DELETE SET NULL`);
+  await query(`ALTER TABLE venta_items ADD COLUMN IF NOT EXISTS descripcion TEXT`);
+  await query(`ALTER TABLE venta_items DROP CONSTRAINT IF EXISTS venta_items_size_check`);
+  await query(`ALTER TABLE venta_items ADD CONSTRAINT venta_items_size_check
+    CHECK (size IS NULL OR size IN ('S', 'M', 'L', 'XL'))`);
+
+  // --- Estado 'anulada' permitido en ventas.estado ---
+  await query(`ALTER TABLE ventas DROP CONSTRAINT IF EXISTS ventas_estado_check`);
+  await query(`ALTER TABLE ventas ADD CONSTRAINT ventas_estado_check
+    CHECK (estado IN ('pagada', 'parcial', 'pendiente', 'anulada'))`);
+
+  // --- Eliminar triggers de saldo: el backend es la única fuente de verdad ---
+  // (si quedaran activos, el saldo se contaría doble respecto del recálculo del backend)
+  await query(`DROP TRIGGER IF EXISTS trigger_actualizar_saldo_venta ON ventas`);
+  await query(`DROP TRIGGER IF EXISTS trigger_procesar_pago ON pagos`);
+
+  // --- Corrección de datos: recalcular saldo de TODOS los clientes con la
+  //     fórmula canónica (total facturado no anulado - pagos válidos). ---
+  await query(`
+    UPDATE clientes c
+    SET saldo = GREATEST(
+          COALESCE((
+            SELECT SUM(v.total) FROM ventas v
+            WHERE v.cliente_id = c.id AND v.is_void = false
+          ), 0)
+          - COALESCE((
+            SELECT SUM(p.monto) FROM pagos p
+            LEFT JOIN ventas v ON p.venta_id = v.id
+            WHERE p.cliente_id = c.id
+              AND (p.venta_id IS NULL OR v.is_void = false)
+          ), 0),
+          0
+        ),
+        updated_at = CURRENT_TIMESTAMP
+  `);
+
+  // --- Corrección de datos: re-sincronizar ventas.pagado/saldo/estado con la
+  //     suma real de pagos de cada venta no anulada. ---
+  await query(`
+    UPDATE ventas v
+    SET pagado = COALESCE(pr.total_pagado, 0),
+        saldo  = GREATEST(v.total - COALESCE(pr.total_pagado, 0), 0),
+        estado = CASE
+          WHEN GREATEST(v.total - COALESCE(pr.total_pagado, 0), 0) <= 0 THEN 'pagada'
+          WHEN COALESCE(pr.total_pagado, 0) > 0 THEN 'parcial'
+          ELSE 'pendiente'
+        END
+    FROM (
+      SELECT venta_id, SUM(monto) AS total_pagado
+      FROM pagos WHERE venta_id IS NOT NULL GROUP BY venta_id
+    ) pr
+    WHERE v.id = pr.venta_id AND v.is_void = false
+  `);
+
+  // Ventas no anuladas sin ningún pago asociado: pagado debe ser 0.
+  await query(`
+    UPDATE ventas v
+    SET pagado = 0, saldo = v.total, estado = 'pendiente'
+    WHERE v.is_void = false
+      AND v.pagado <> 0
+      AND NOT EXISTS (SELECT 1 FROM pagos p WHERE p.venta_id = v.id)
+  `);
 };
 
 // Error 404

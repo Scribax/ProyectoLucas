@@ -137,19 +137,40 @@ export default function ClienteDetallePage() {
   };
 
   const viewFactura = async (ventaId: string) => {
+    // IMPORTANTE: abrir la ventana ANTES del await, dentro del gesto del usuario.
+    // Si se abre después de la llamada al servidor, Safari/Chrome móvil lo bloquean
+    // como popup y "no deja abrir la factura". La llenamos cuando llegan los datos.
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Factura</title></head><body style="font-family:Arial,sans-serif;padding:40px;text-align:center;color:#666">Generando factura...</body></html>');
+      win.document.close();
+    }
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get(`${API_URL}/ventas/${ventaId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const venta = res.data?.venta;
-      if (!venta) { toast.error('No se pudo cargar la factura'); return; }
+      if (!venta) {
+        if (win) win.close();
+        toast.error('No se pudo cargar la factura');
+        return;
+      }
 
       const itemsHtml = (venta.items || []).map((item: any) => {
         const nombre = item.descripcion || item.articulo_nombre ||
           (item.size ? `Huevo ${SIZE_LABELS[item.size] || item.size}` : 'Articulo');
-        return `<tr><td>${escapeHtml(nombre)}</td><td>${escapeHtml(item.cantidad)}</td><td>$${escapeHtml(item.precio_unitario)}</td><td>$${escapeHtml(item.subtotal)}</td></tr>`;
+        return `<tr><td>${escapeHtml(nombre)}</td><td>${escapeHtml(item.cantidad)}</td><td>$${escapeHtml(Number(item.precio_unitario).toLocaleString())}</td><td>$${escapeHtml(Number(item.subtotal).toLocaleString())}</td></tr>`;
       }).join('');
+
+      // Detalle de pagos de esta factura
+      const pagos = venta.pagos || [];
+      const pagosHtml = pagos.length ? `
+        <h3 style="margin:24px 0 8px;font-size:16px;color:#333">Pagos registrados</h3>
+        <table><thead><tr><th>Fecha</th><th>Método</th><th style="text-align:right">Monto</th></tr></thead>
+        <tbody>${pagos.map((p: any) =>
+          `<tr><td>${escapeHtml(format(parseISO(p.fecha), 'dd/MM/yyyy HH:mm'))}</td><td>${escapeHtml((p.metodo || 'efectivo'))}</td><td style="text-align:right">$${escapeHtml(Number(p.monto).toLocaleString())}</td></tr>`
+        ).join('')}</tbody></table>` : '';
 
       const voidBanner = venta.is_void ? `
         <div style="background:#fef2f2;border:2px solid #ef4444;padding:12px;text-align:center;margin-bottom:20px;border-radius:8px;">
@@ -165,7 +186,7 @@ export default function ClienteDetallePage() {
           body{font-family:Arial,sans-serif;padding:40px;max-width:700px;margin:0 auto}
           .header{text-align:center;border-bottom:3px solid #eab308;padding-bottom:20px;margin-bottom:20px}
           .header h1{margin:0;color:#333}.header p{color:#666;margin:5px 0}
-          table{width:100%;border-collapse:collapse;margin:20px 0}
+          table{width:100%;border-collapse:collapse;margin:12px 0}
           th,td{padding:10px;text-align:left;border-bottom:1px solid #ddd}
           th{background:#f5f5f5}.total{font-size:22px;font-weight:bold;text-align:right;margin-top:20px}
           .footer{text-align:center;margin-top:40px;color:#666;font-size:14px}
@@ -181,6 +202,7 @@ export default function ClienteDetallePage() {
           <span style="font-size:16px">Pagado: $${escapeHtml(Number(venta.pagado || 0).toLocaleString())}</span><br>
           ${(Number(venta.saldo) || 0) > 0 && !venta.is_void ? `<span style="font-size:16px;color:red">Saldo: $${escapeHtml(Number(venta.saldo || 0).toLocaleString())}</span>` : ''}
         </div>
+        ${pagosHtml}
         <div class="footer"><p>Gracias por su compra!</p></div>
         <button onclick="window.print()" style="width:100%;padding:15px;background:#eab308;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:20px">
           Imprimir / Guardar PDF
@@ -189,19 +211,21 @@ export default function ClienteDetallePage() {
           ← Volver
         </button></body></html>`;
 
-      // Usamos Blob URL en lugar de window.open + document.write
-      // Esto es compatible con Safari/iOS que bloquea about:blank con document.write
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const newWindow = window.open(url, '_blank');
-
-      // Liberar la URL del blob cuando la ventana cargue (o tras 60s como fallback)
-      if (newWindow) {
-        newWindow.addEventListener('load', () => URL.revokeObjectURL(url));
+      if (win) {
+        // La ventana ya está abierta (gesto del usuario): solo reemplazamos su contenido.
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
       } else {
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        // Fallback: el navegador no permitió abrir la ventana. Usamos Blob URL.
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const fallback = window.open(url, '_blank');
+        if (!fallback) toast.error('Permití las ventanas emergentes para ver la factura');
+        else setTimeout(() => URL.revokeObjectURL(url), 60_000);
       }
     } catch (error: any) {
+      if (win) win.close();
       toast.error(error?.response?.data?.message || 'Error cargando factura');
     }
   };
