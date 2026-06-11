@@ -196,20 +196,20 @@ export default function ProduccionPage() {
               onClick={() => handleOpenModal(g)}
               className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 cursor-pointer hover:shadow-md transition-shadow"
             >
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
+              <div className="flex justify-between items-start gap-3">
+                <div className="flex items-start gap-4 min-w-0 flex-1">
+                  <div className="w-12 h-12 shrink-0 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
                     <Egg className="w-6 h-6 text-yellow-600" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-semibold">{g.name}</h3>
-                    <div className="flex gap-3 text-sm text-gray-500 mt-1">
+                    <div className="flex flex-wrap gap-2 text-sm text-gray-500 mt-1">
                       {p ? (
                         <>
-                          <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Chico: {p.S || 0}</span>
-                          <span className="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">Mediano: {p.M || 0}</span>
-                          <span className="px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-800">Grande: {p.L || 0}</span>
-                          <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-800">Extra Grande: {p.XL || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs whitespace-nowrap bg-amber-100 text-amber-800">Chico: {p.S || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs whitespace-nowrap bg-yellow-100 text-yellow-800">Mediano: {p.M || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs whitespace-nowrap bg-orange-100 text-orange-800">Grande: {p.L || 0}</span>
+                          <span className="px-2 py-0.5 rounded text-xs whitespace-nowrap bg-red-100 text-red-800">Extra Grande: {p.XL || 0}</span>
                         </>
                       ) : (
                         <span className="text-gray-400">Sin producción registrada</span>
@@ -217,7 +217,7 @@ export default function ProduccionPage() {
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <p className="text-2xl font-bold text-yellow-600">{total}</p>
                   <p className="text-xs text-gray-500">huevos</p>
                 </div>
