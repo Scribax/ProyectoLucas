@@ -1,157 +1,260 @@
-# Granja Avícola PWA - Sistema de Gestión
+<div align="center">
 
-Sistema integral de gestión para granja de gallinas ponedoras. Progressive Web App (PWA) self-hosted, mobile-first, sin dependencias externas.
+# 🥚 Granja Avícola PWA
 
-## 🚀 Características
+### Sistema integral de gestión para granjas de gallinas ponedoras
 
-- **Autenticación JWT** con roles (admin, empleado, invitado)
-- **Gestión de gallineros** y producción diaria
-- **Control de clientes** con cuenta corriente
-- **Ventas y facturación** visual (imágenes PNG)
-- **Dashboard** con estadísticas y gráficos
-- **Reportes exportables** (Excel/CSV)
-- **Backup automático** de base de datos
-- **PWA** installable en móviles
-- **Dark/Light mode**
+Progressive Web App **self-hosted**, **mobile-first** y sin dependencias externas.
+Gestioná producción, clientes, ventas y cuentas corrientes desde el celular o la compu.
 
-## 📋 Stack Tecnológico
+<br/>
+
+![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+</div>
+
+---
+
+## ✨ Características
+
+| | Funcionalidad |
+|---|---|
+| 🔐 | **Autenticación JWT** con roles (admin, empleado, invitado) |
+| 🐔 | **Gestión de gallineros** y registro de **producción diaria** por tamaño de huevo (S/M/L/XL) |
+| 👥 | **Clientes con cuenta corriente** y saldo siempre cuadrado |
+| 🧾 | **Ventas y facturación** con factura visual (imagen PNG) que se abre incluso en el celular |
+| 💸 | **Pagos a cuenta** y registro de **gastos** |
+| 📊 | **Dashboard** con estadísticas y gráficos |
+| 📦 | **Gestión de artículos** |
+| 💾 | **Backups automáticos** de la base de datos |
+| 📱 | **PWA instalable** en móviles + **modo oscuro / claro** |
+
+> 💡 **Saldo confiable:** el backend es la **única fuente de verdad** del saldo de cada cliente.
+> La fórmula canónica es `saldo = Σ(facturas no anuladas) − Σ(pagos válidos)`, recalculada en cada
+> operación. Al arrancar, `ensureSchema()` aplica migraciones, elimina triggers viejos y recalcula
+> todos los saldos automáticamente — **no hay que tocar la base de datos a mano**.
+
+---
+
+## 🧱 Stack Tecnológico
 
 | Capa | Tecnología |
 |------|-----------|
-| Frontend | Next.js 14, React 18, TypeScript, TailwindCSS |
-| Backend | Node.js, Express, TypeScript |
-| Database | PostgreSQL 15 |
-| Proxy | Nginx |
-| Infra | Docker Compose |
+| **Frontend** | Next.js 14 · React 18 · TypeScript · TailwindCSS |
+| **Backend** | Node.js · Express · TypeScript |
+| **Base de datos** | PostgreSQL 15 |
+| **Proxy / SSL** | Nginx |
+| **Infraestructura** | Docker Compose |
+
+---
+
+## 🏗️ Arquitectura
+
+```
+                      ┌──────────────────────────────┐
+   Navegador  ──────► │  Nginx  (:80 / :443)         │
+   (PWA móvil)        │  proxy + SSL + factura PNG    │
+                      └───────┬───────────────┬───────┘
+                              │ /              │ /api
+                              ▼                ▼
+                     ┌────────────────┐  ┌────────────────┐
+                     │ Frontend       │  │ Backend         │
+                     │ Next.js (:3000)│  │ Express (:3001) │
+                     └────────────────┘  └────────┬────────┘
+                                                   │
+                                                   ▼
+                                          ┌────────────────┐
+                                          │ PostgreSQL 15  │
+                                          │ (granja-db)    │
+                                          └────────────────┘
+```
+
+El navegador siempre habla con **el mismo dominio**: Nginx sirve la PWA en `/` y proxea la API en `/api`.
+
+---
 
 ## 🛠️ Requisitos
 
 - Ubuntu 20.04+ (o cualquier Linux con Docker)
-- Docker 24.0+
-- Docker Compose 2.20+
-- 2GB RAM mínimo
-- 20GB disco
+- Docker 24.0+ y Docker Compose v2.20+
+- 2 GB de RAM mínimo · 20 GB de disco
 
-## 📦 Instalación
+---
 
-### 1. Clonar y preparar
+## 🚀 Primer despliegue
 
 ```bash
+# 1. Clonar
 cd /opt
 sudo git clone <repo> granja-avicola
 cd granja-avicola
+
+# 2. Levantar todo (script idempotente: crea carpetas, levanta DB, build + up, health check)
+chmod +x scripts/*.sh
+bash scripts/setup.sh
 ```
 
-### 2. Variables de entorno
+> No hace falta crear archivos `.env` a mano: las credenciales y la URL del API (`/api`)
+> ya están definidas en `docker-compose.yml`. La base se inicializa sola con `init.sql`
+> la primera vez, y `ensureSchema()` se encarga del resto en cada arranque.
+
+### Verificar
 
 ```bash
-# Backend
-cp backend/.env.example backend/.env
-# Editar backend/.env con tus valores
-
-# Frontend  
-cp frontend/.env.local.example frontend/.env.local
-# Editar frontend/.env.local
+curl http://localhost/health        # estado del sistema
+docker compose logs -f              # logs en vivo
 ```
 
-### 3. Iniciar servicios
+---
+
+## 🔄 Actualizar (app ya en producción)
 
 ```bash
-sudo docker compose up -d
+cd /opt/granja-avicola
+bash scripts/update.sh
 ```
 
-### 4. Verificar
+`update.sh` hace **backup automático**, `git pull`, reconstruye las imágenes con `--no-cache`
+(incluido el frontend, para que tome la URL `/api` horneada en el bundle) y levanta todo de nuevo.
 
-```bash
-# Health check
-curl http://localhost/health
-
-# Ver logs
-sudo docker compose logs -f
-```
+---
 
 ## 🌐 Acceso
 
-- **App**: http://localhost (o tu dominio)
-- **API**: http://localhost/api
-- **Usuario default**: `admin` / `admin123`
+| | URL / Credencial |
+|---|---|
+| **App** | `http://localhost` (o tu dominio) |
+| **API** | `http://localhost/api` |
+| **Usuario por defecto** | `admin` / `admin123` |
 
-## 📁 Estructura
+> ⚠️ **Cambiá la contraseña de `admin` después del primer login.**
+
+---
+
+## 📁 Estructura del proyecto
 
 ```
 granja-avicola/
-├── docker-compose.yml      # Orquestación
-├── nginx/                  # Proxy y SSL
+├── docker-compose.yml      # Orquestación de servicios
+├── nginx/                  # Proxy reverso + SSL
 ├── database/
-│   └── init.sql            # Schema completo
-├── backend/                # API REST
-│   ├── src/
-│   │   ├── config/
-│   │   ├── middleware/
-│   │   └── routes/
-│   └── Dockerfile
-├── frontend/               # PWA Next.js
-│   ├── app/
+│   └── init.sql            # Schema inicial (corre solo la 1ª vez)
+├── backend/                # API REST (Express + TS)
+│   └── src/
+│       ├── config/         # DB + helper recalcularSaldoCliente()
+│       ├── middleware/     # auth JWT
+│       └── routes/         # clientes, ventas, dashboard, gastos, ...
+├── frontend/               # PWA Next.js 14
+│   ├── app/                # rutas / páginas
 │   ├── components/
-│   └── store/
-└── backups/                # Backups automáticos
+│   └── store/              # estado (zustand)
+├── scripts/                # setup.sh · update.sh · backup.sh · restore.sh
+└── backups/                # backups automáticos + facturas
 ```
+
+---
 
 ## 🔧 Comandos útiles
 
 ```bash
 # Reiniciar todo
-sudo docker compose restart
+docker compose restart
 
 # Ver logs de un servicio
-sudo docker compose logs -f backend
+docker compose logs -f backend
 
 # Backup manual
-./scripts/backup.sh
+bash scripts/backup.sh
 
-# Restaurar backup
-./scripts/restore.sh backups/granja_2024-01-15_14-30-00.sql
+# Restaurar un backup
+bash scripts/restore.sh backups/granja_2024-01-15_14-30-00.sql.gz
 
-# Actualizar (pull + rebuild)
-./scripts/update.sh
+# Actualizar (backup + pull + rebuild)
+bash scripts/update.sh
+
+# Diagnóstico de saldos (requiere token admin) → debería dar "descuadrados: 0"
+curl -H "Authorization: Bearer TU_TOKEN" http://localhost/api/clientes/diagnostico/saldos
 ```
 
-## 🔄 Backup automático
+---
 
-El sistema incluye backup diario automático configurado en `cron`:
+## 💾 Backups
+
+El script `scripts/backup.sh` genera un dump comprimido de PostgreSQL (`.sql.gz`) y respalda
+la carpeta `invoices/`, borrando automáticamente los backups de más de 30 días.
 
 ```bash
-# Verificar cron
-sudo crontab -l
-
 # Backup manual
-sudo docker exec granja-db pg_dump -U postgres granja_avicola > backup_$(date +%Y%m%d).sql
+bash scripts/backup.sh
+
+# Programar backup diario por cron (ejemplo: 3 AM)
+sudo crontab -e
+# 0 3 * * * cd /opt/granja-avicola && bash scripts/backup.sh
 ```
 
-## 📱 PWA - Instalación móvil
+---
 
-1. Abrir la app en Chrome/Safari móvil
-2. Menu → "Agregar a pantalla de inicio"
-3. Funciona offline con datos cacheados
+## 📱 PWA — Instalación en el celular
+
+1. Abrí la app en Chrome/Safari móvil.
+2. Menú → **"Agregar a pantalla de inicio"**.
+3. Listo: queda como una app nativa y funciona con datos cacheados.
+
+---
 
 ## 🐛 Troubleshooting
 
-### Problemas de permisos
+<details>
+<summary><b>Demasiadas peticiones (rate limit)</b></summary>
+
+El backend usa `trust proxy` para leer la IP real detrás de Nginx y un límite de 1000 req / 15 min.
+Si lo ves igual, asegurate de haber reconstruido el backend (`docker compose build backend`).
+</details>
+
+<details>
+<summary><b>El navegador sigue pegándole a <code>localhost:3001</code></b></summary>
+
+La URL del API se **hornea en build**. Reconstruí el frontend con `--no-cache`
+(o simplemente corré `bash scripts/update.sh`).
+</details>
+
+<details>
+<summary><b>Problemas de permisos</b></summary>
+
 ```bash
 sudo chown -R $USER:$USER /opt/granja-avicola
 ```
+</details>
 
-### Resetear base de datos
+<details>
+<summary><b>Resetear la base de datos (⚠️ borra datos)</b></summary>
+
 ```bash
-sudo docker compose down -v
-sudo docker compose up -d db
-# Esperar 10s, luego:
-sudo docker compose up -d
+docker compose down -v
+docker compose up -d postgres   # esperá ~10s
+docker compose up -d
 ```
+</details>
 
-### SSL/HTTPS
+<details>
+<summary><b>SSL / HTTPS</b></summary>
+
 Ver `nginx/README.md` para configurar Let's Encrypt.
+</details>
+
+---
 
 ## 📄 Licencia
 
-MIT - Libre para uso personal y comercial.
+**MIT** — Libre para uso personal y comercial.
+
+<div align="center">
+<sub>Hecho con 🥚 para administrar la granja sin dolores de cabeza.</sub>
+</div>
