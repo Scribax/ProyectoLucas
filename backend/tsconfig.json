@@ -22,6 +22,7 @@
   "exclude": [
     "node_modules",
     "dist",
+    "src/index-simple.ts",
     "src/routes/auth-simple.ts",
     "src/scripts/init-db.ts"
   ]

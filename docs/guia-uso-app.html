@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guía de uso · Granja Avícola</title>
+<style>
+  :root {
+    --amarillo: #f59e0b;
+    --amarillo-claro: #fef3c7;
+    --naranja: #ea580c;
+    --texto: #1f2937;
+    --texto-suave: #6b7280;
+    --fondo: #fffbeb;
+    --tarjeta: #ffffff;
+    --borde: #fde68a;
+    --verde: #16a34a;
+    --rojo: #dc2626;
+    --azul: #2563eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--texto);
+    background: var(--fondo);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 20px 80px; }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, var(--amarillo) 0%, var(--naranja) 100%);
+    color: #fff;
+    text-align: center;
+    padding: 60px 20px 70px;
+    border-radius: 0 0 40px 40px;
+    box-shadow: 0 10px 30px rgba(234, 88, 12, 0.25);
+  }
+  header .egg { font-size: 64px; display: block; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.2)); }
+  header h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.5px; }
+  header p { font-size: 1.1rem; opacity: 0.95; margin-top: 8px; }
+  .saludo {
+    display: inline-block; margin-top: 18px; background: rgba(255,255,255,.2);
+    padding: 8px 20px; border-radius: 999px; font-weight: 600; backdrop-filter: blur(4px);
+  }
+
+  /* NAV / INDICE */
+  .indice {
+    background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 20px;
+    padding: 24px 28px; margin: -40px auto 40px; max-width: 760px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.06); position: relative;
+  }
+  .indice h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; color: var(--texto-suave); margin-bottom: 14px; }
+  .indice ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .indice a {
+    text-decoration: none; color: var(--texto); font-weight: 600; display: flex; align-items: center;
+    gap: 10px; padding: 10px 14px; border-radius: 12px; transition: background .15s, transform .15s;
+  }
+  .indice a:hover { background: var(--amarillo-claro); transform: translateX(3px); }
+  .indice a span.ic { font-size: 1.3rem; }
+
+  /* SECCIONES */
+  section {
+    background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 20px;
+    padding: 30px 32px; margin-bottom: 26px; box-shadow: 0 4px 16px rgba(0,0,0,.04);
+  }
+  section h2 {
+    font-size: 1.5rem; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+    color: var(--naranja);
+  }
+  section h2 .num {
+    background: var(--amarillo); color: #fff; width: 38px; height: 38px; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+  }
+  section h3 { font-size: 1.1rem; margin: 22px 0 8px; color: var(--texto); }
+  section p { margin-bottom: 12px; color: #374151; }
+  ul.lista { margin: 0 0 12px 22px; }
+  ul.lista li { margin-bottom: 8px; }
+
+  .pasos { counter-reset: paso; list-style: none; margin: 10px 0; }
+  .pasos li {
+    counter-increment: paso; position: relative; padding: 14px 16px 14px 56px;
+    background: var(--fondo); border-radius: 14px; margin-bottom: 10px; border: 1px solid var(--borde);
+  }
+  .pasos li::before {
+    content: counter(paso); position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 30px; height: 30px; background: var(--naranja); color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95rem;
+  }
+
+  .tip, .alerta, .ok {
+    border-radius: 14px; padding: 16px 18px; margin: 16px 0; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .tip { background: #eff6ff; border-left: 5px solid var(--azul); }
+  .alerta { background: #fef2f2; border-left: 5px solid var(--rojo); }
+  .ok { background: #f0fdf4; border-left: 5px solid var(--verde); }
+  .tip .em, .alerta .em, .ok .em { font-size: 1.4rem; flex-shrink: 0; }
+
+  .faq details {
+    border: 1px solid var(--borde); border-radius: 14px; margin-bottom: 12px; overflow: hidden; background: var(--fondo);
+  }
+  .faq summary {
+    cursor: pointer; padding: 16px 20px; font-weight: 700; color: var(--texto); list-style: none;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; margin-left: auto; font-size: 1.4rem; color: var(--naranja); transition: transform .2s; }
+  .faq details[open] summary::after { transform: rotate(45deg); }
+  .faq details > p { padding: 0 20px 18px; color: #374151; }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .badge { padding: 4px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600; white-space: nowrap; }
+  .b-s { background: #fef3c7; color: #92400e; }
+  .b-m { background: #fde68a; color: #854d0e; }
+  .b-l { background: #fed7aa; color: #9a3412; }
+  .b-xl { background: #fecaca; color: #991b1b; }
+
+  footer { text-align: center; color: var(--texto-suave); padding: 30px 20px; font-size: .9rem; }
+  footer strong { color: var(--naranja); }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.8rem; }
+    .indice ul { grid-template-columns: 1fr; }
+    section { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <span class="egg">🥚</span>
+    <h1>Guía de uso de la App</h1>
+    <p>Sistema de gestión de la Granja Avícola</p>
+    <span class="saludo">¡Hola Lucas! 👋 Esta guía es para vos</span>
+  </header>
+
+  <div class="wrap">
+    <nav class="indice">
+      <h2>📑 ¿Qué querés hacer?</h2>
+      <ul>
+        <li><a href="#inicio"><span class="ic">🔑</span> Entrar a la app</a></li>
+        <li><a href="#instalar"><span class="ic">📱</span> Instalar en el celular</a></li>
+        <li><a href="#produccion"><span class="ic">🐔</span> Registrar producción</a></li>
+        <li><a href="#clientes"><span class="ic">👥</span> Clientes y saldos</a></li>
+        <li><a href="#ventas"><span class="ic">🧾</span> Hacer una venta</a></li>
+        <li><a href="#pagos"><span class="ic">💵</span> Cobrar / pagos</a></li>
+        <li><a href="#facturas"><span class="ic">🖨️</span> Ver facturas</a></li>
+        <li><a href="#dashboard"><span class="ic">📊</span> El Dashboard</a></li>
+        <li><a href="#faq"><span class="ic">❓</span> Dudas frecuentes</a></li>
+      </ul>
+    </nav>
+
+    <!-- INICIO -->
+    <section id="inicio">
+      <h2><span class="num">1</span> Entrar a la app</h2>
+      <ol class="pasos">
+        <li>Abrí el navegador (Chrome o Safari) y entrá a la dirección de tu app.</li>
+        <li>Escribí tu <strong>usuario</strong> y <strong>contraseña</strong>.</li>
+        <li>Tocá <strong>"Iniciar sesión"</strong>. ¡Listo!</li>
+      </ol>
+      <div class="alerta">
+        <span class="em">🔒</span>
+        <div><strong>Importante:</strong> si es la primera vez, la contraseña por defecto es <code>admin123</code>. Cambiala enseguida desde tu perfil para que nadie más entre.</div>
+      </div>
+    </section>
+
+    <!-- INSTALAR -->
+    <section id="instalar">
+      <h2><span class="num">2</span> Instalar la app en el celular</h2>
+      <p>No hace falta bajarla de ninguna tienda. La podés "instalar" directo desde el navegador para que quede como una app más en tu teléfono:</p>
+      <ol class="pasos">
+        <li>Abrí la app en <strong>Chrome</strong> (Android) o <strong>Safari</strong> (iPhone).</li>
+        <li>Tocá el menú del navegador (los tres puntos en Android, o el ícono de compartir ⬆️ en iPhone).</li>
+        <li>Elegí <strong>"Agregar a pantalla de inicio"</strong>.</li>
+        <li>Te aparece el ícono de la granja 🥚 en tu pantalla, como cualquier app.</li>
+      </ol>
+      <div class="ok">
+        <span class="em">✅</span>
+        <div>Una vez instalada, se abre a pantalla completa y carga más rápido.</div>
+      </div>
+    </section>
+
+    <!-- PRODUCCION -->
+    <section id="produccion">
+      <h2><span class="num">3</span> Registrar la producción de huevos</h2>
+      <p>En la sección <strong>Producción</strong> anotás cuántos huevos puso cada gallinero, por tamaño:</p>
+      <div class="badges">
+        <span class="badge b-s">Chico (S)</span>
+        <span class="badge b-m">Mediano (M)</span>
+        <span class="badge b-l">Grande (L)</span>
+        <span class="badge b-xl">Extra Grande (XL)</span>
+      </div>
+      <ol class="pasos">
+        <li>Entrá a <strong>Producción</strong>.</li>
+        <li>Tocá la tarjeta del gallinero que querés cargar.</li>
+        <li>Poné la cantidad de huevos de cada tamaño.</li>
+        <li>Guardá. El total se calcula solo y queda registrado por día.</li>
+      </ol>
+      <div class="tip">
+        <span class="em">💡</span>
+        <div>Cada tarjeta te muestra el resumen del día con el total de huevos bien grande, así lo ves de un vistazo desde el celular.</div>
+      </div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section id="clientes">
+      <h2><span class="num">4</span> Clientes y cuenta corriente</h2>
+      <p>En <strong>Clientes</strong> tenés la lista de todos tus compradores con su <strong>saldo</strong> (lo que te deben).</p>
+      <ul class="lista">
+        <li>Tocá un cliente para ver su historial de compras y pagos.</li>
+        <li>El <strong>saldo</strong> se actualiza solo cada vez que hacés una venta o cobrás un pago.</li>
+        <li>Para agregar un cliente nuevo, usá el botón <strong>"+ Nuevo cliente"</strong>.</li>
+      </ul>
+      <div class="ok">
+        <span class="em">🧮</span>
+        <div><strong>El saldo es confiable:</strong> el sistema lo calcula automáticamente como <em>(suma de facturas) − (suma de pagos)</em>. No tenés que sumar ni restar a mano nunca.</div>
+      </div>
+    </section>
+
+    <!-- VENTAS -->
+    <section id="ventas">
+      <h2><span class="num">5</span> Hacer una venta</h2>
+      <ol class="pasos">
+        <li>Andá a <strong>Ventas</strong> y tocá <strong>"Nueva venta"</strong>.</li>
+        <li>Elegí el <strong>cliente</strong> (o ponelo como venta de mostrador).</li>
+        <li>Agregá los <strong>artículos</strong> (maples, cajones, etc.) con su cantidad y precio.</li>
+        <li>Revisá el total y confirmá la venta.</li>
+      </ol>
+      <div class="tip">
+        <span class="em">💡</span>
+        <div>Si el cliente paga en el momento, podés registrar el pago en la misma venta. Si queda "fiado", el monto se suma a su saldo automáticamente.</div>
+      </div>
+    </section>
+
+    <!-- PAGOS -->
+    <section id="pagos">
+      <h2><span class="num">6</span> Cobrar un pago</h2>
+      <p>Cuando un cliente te paga lo que debía:</p>
+      <ol class="pasos">
+        <li>Entrá al <strong>cliente</strong> desde la sección Clientes.</li>
+        <li>Tocá <strong>"Registrar pago"</strong>.</li>
+        <li>Poné el monto que te pagó y confirmá.</li>
+      </ol>
+      <div class="ok">
+        <span class="em">✅</span>
+        <div>El saldo del cliente baja al instante. Podés registrar pagos "a cuenta" aunque no estén ligados a una factura puntual — igual se descuentan de la deuda.</div>
+      </div>
+    </section>
+
+    <!-- FACTURAS -->
+    <section id="facturas">
+      <h2><span class="num">7</span> Ver e imprimir facturas</h2>
+      <p>Cada venta genera una <strong>factura visual</strong> (una imagen) que podés mostrar o mandar al cliente.</p>
+      <ul class="lista">
+        <li>Desde <strong>Facturas</strong> o desde el detalle del cliente, tocá la venta.</li>
+        <li>Se abre la factura con el detalle de artículos y los pagos hechos.</li>
+        <li>La podés guardar como imagen y enviarla por WhatsApp.</li>
+      </ul>
+      <div class="tip">
+        <span class="em">📲</span>
+        <div>La factura se abre bien también en el celular. Si alguna vez no abre, fijate que el navegador no esté bloqueando las ventanas emergentes.</div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard">
+      <h2><span class="num">8</span> El Dashboard (resumen)</h2>
+      <p>Es la pantalla principal. De un vistazo te muestra:</p>
+      <ul class="lista">
+        <li>📈 Producción del día y de la semana.</li>
+        <li>💰 Ventas y total cobrado.</li>
+        <li>👥 Clientes que más te deben.</li>
+        <li>💸 Gastos registrados.</li>
+      </ul>
+      <p>Es ideal para arrancar el día y saber cómo viene la granja.</p>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="faq">
+      <h2><span class="num">?</span> Dudas frecuentes</h2>
+
+      <details>
+        <summary>Me olvidé la contraseña, ¿qué hago?</summary>
+        <p>Pedile al administrador del sistema que te la resetee. Si vos sos el admin, podés crear o editar usuarios desde la sección de configuración.</p>
+      </details>
+
+      <details>
+        <summary>El saldo de un cliente parece mal, ¿lo arreglo a mano?</summary>
+        <p>No hace falta. El sistema recalcula el saldo solo en cada operación. Si ves algo raro, avisale a quien administra el servidor: hay una herramienta de diagnóstico que cuadra todos los saldos automáticamente.</p>
+      </details>
+
+      <details>
+        <summary>¿Funciona sin internet?</summary>
+        <p>Necesitás conexión para guardar datos nuevos (ventas, pagos, producción). Algunas pantallas ya vistas pueden quedar cacheadas, pero para trabajar lo ideal es tener señal.</p>
+      </details>
+
+      <details>
+        <summary>Anulé una factura por error, ¿se puede deshacer?</summary>
+        <p>Una factura anulada deja de contar en el saldo. Si la anulaste por error, lo más simple es volver a cargar la venta. Ante la duda, consultá con el administrador antes de anular.</p>
+      </details>
+
+      <details>
+        <summary>Los números se ven cortados en el celular</summary>
+        <p>Eso ya está corregido en la última versión. Si todavía lo ves así, cerrá la app, recargá la página (o reinstalala desde "Agregar a pantalla de inicio") para tomar la última versión.</p>
+      </details>
+    </section>
+
+    <footer>
+      <p>Cualquier duda que no esté acá, escribile a quien te configuró el sistema. 🐔</p>
+      <p style="margin-top:8px;"><strong>Granja Avícola PWA</strong> · Guía para el usuario</p>
+    </footer>
+  </div>
+</body>
+</html>

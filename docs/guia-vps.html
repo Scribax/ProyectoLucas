@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guía de VPS · Granja Avícola</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg2: #1e293b;
+    --card: #1e293b;
+    --card2: #273449;
+    --texto: #e2e8f0;
+    --suave: #94a3b8;
+    --acento: #38bdf8;
+    --acento2: #818cf8;
+    --verde: #4ade80;
+    --amarillo: #facc15;
+    --rojo: #f87171;
+    --borde: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(ellipse at top, #1e293b 0%, var(--bg) 60%);
+    color: var(--texto); line-height: 1.65; min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header {
+    text-align: center; padding: 64px 20px 50px;
+  }
+  header .ic { font-size: 60px; display: block; margin-bottom: 12px; }
+  header h1 {
+    font-size: 2.4rem; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--acento), var(--acento2));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  header p { color: var(--suave); margin-top: 10px; font-size: 1.05rem; }
+
+  .indice {
+    background: var(--card); border: 1px solid var(--borde); border-radius: 18px;
+    padding: 22px 26px; margin-bottom: 40px;
+  }
+  .indice h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--suave); margin-bottom: 14px; }
+  .indice ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .indice a {
+    text-decoration: none; color: var(--texto); font-weight: 600; padding: 9px 14px; border-radius: 10px;
+    display: flex; align-items: center; gap: 10px; transition: background .15s, color .15s;
+  }
+  .indice a:hover { background: var(--card2); color: var(--acento); }
+
+  section {
+    background: var(--card); border: 1px solid var(--borde); border-radius: 18px;
+    padding: 28px 30px; margin-bottom: 24px;
+  }
+  section h2 {
+    font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+    color: var(--texto);
+  }
+  section h2 .em { font-size: 1.6rem; }
+  section > p.desc { color: var(--suave); margin-bottom: 18px; }
+  section h3 { font-size: 1.05rem; margin: 22px 0 8px; color: var(--acento); }
+
+  /* bloque de comando */
+  .cmd {
+    position: relative; background: #0b1120; border: 1px solid var(--borde); border-radius: 12px;
+    padding: 16px 18px; margin: 10px 0; font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    font-size: .92rem; overflow-x: auto;
+  }
+  .cmd code { color: #e2e8f0; white-space: pre; display: block; }
+  .cmd .prompt { color: var(--verde); user-select: none; }
+  .cmd .flag { color: var(--amarillo); }
+  .cmd .cmt { color: var(--suave); font-style: italic; }
+  .what { color: var(--suave); font-size: .9rem; margin: 4px 0 16px 4px; }
+  .what b { color: var(--texto); }
+
+  .nota, .warn, .danger {
+    border-radius: 12px; padding: 15px 18px; margin: 16px 0; display: flex; gap: 12px; align-items: flex-start;
+    font-size: .95rem;
+  }
+  .nota { background: rgba(56,189,248,.1); border-left: 4px solid var(--acento); }
+  .warn { background: rgba(250,204,21,.1); border-left: 4px solid var(--amarillo); }
+  .danger { background: rgba(248,113,113,.12); border-left: 4px solid var(--rojo); }
+  .nota .e, .warn .e, .danger .e { font-size: 1.3rem; flex-shrink: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .92rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--borde); }
+  th { color: var(--suave); text-transform: uppercase; font-size: .75rem; letter-spacing: .5px; }
+  td code { background: #0b1120; padding: 2px 7px; border-radius: 6px; color: var(--acento); font-size: .88rem; }
+
+  footer { text-align: center; color: var(--suave); padding: 30px 20px; font-size: .9rem; }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.8rem; }
+    .indice ul { grid-template-columns: 1fr; }
+    section { padding: 22px 18px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="ic">🖥️</span>
+      <h1>Guía del Servidor (VPS)</h1>
+      <p>Comandos básicos y cosas a tener en cuenta · Granja Avícola</p>
+    </header>
+
+    <nav class="indice">
+      <h2>📑 Contenido</h2>
+      <ul>
+        <li><a href="#conectar">🔌 Conectarse al VPS</a></li>
+        <li><a href="#ubicacion">📁 Dónde está la app</a></li>
+        <li><a href="#deploy">🚀 Actualizar la app</a></li>
+        <li><a href="#estado">🩺 Ver estado y logs</a></li>
+        <li><a href="#docker">🐳 Comandos Docker</a></li>
+        <li><a href="#prune">🧹 Liberar espacio (prune)</a></li>
+        <li><a href="#backups">💾 Backups</a></li>
+        <li><a href="#saldos">🧮 Diagnóstico de saldos</a></li>
+        <li><a href="#cuidado">⚠️ Cosas a tener en cuenta</a></li>
+      </ul>
+    </nav>
+
+    <!-- CONECTAR -->
+    <section id="conectar">
+      <h2><span class="em">🔌</span> Conectarse al VPS</h2>
+      <p class="desc">Desde tu PC, abrí una terminal y conectate por SSH (reemplazá la IP por la de tu servidor):</p>
+      <div class="cmd"><code><span class="prompt">$ </span>ssh root@TU_IP_DEL_SERVIDOR</code></div>
+      <p class="what">Te pide la contraseña (o usa tu clave SSH) y entrás al servidor.</p>
+    </section>
+
+    <!-- UBICACION -->
+    <section id="ubicacion">
+      <h2><span class="em">📁</span> Dónde está la app</h2>
+      <p class="desc">El proyecto vive en <code>/opt/granja-avicola</code>. Casi todos los comandos se corren parado ahí:</p>
+      <div class="cmd"><code><span class="prompt">$ </span>cd /opt/granja-avicola</code></div>
+      <table>
+        <tr><th>Comando</th><th>Para qué sirve</th></tr>
+        <tr><td><code>ls</code></td><td>Listar archivos de la carpeta actual</td></tr>
+        <tr><td><code>pwd</code></td><td>Ver en qué carpeta estás parado</td></tr>
+        <tr><td><code>cd ..</code></td><td>Subir un nivel de carpeta</td></tr>
+        <tr><td><code>clear</code></td><td>Limpiar la pantalla de la terminal</td></tr>
+      </table>
+    </section>
+
+    <!-- DEPLOY -->
+    <section id="deploy">
+      <h2><span class="em">🚀</span> Actualizar la app (deploy)</h2>
+      <p class="desc">Cuando hay cambios nuevos en el código, la forma recomendada es usar el script <code>update.sh</code>. Hace todo solo: backup, baja los cambios, reconstruye y levanta.</p>
+      <div class="cmd"><code><span class="prompt">$ </span>cd /opt/granja-avicola
+<span class="prompt">$ </span>bash scripts/update.sh</code></div>
+      <p class="what"><b>update.sh</b> hace: backup automático → <code>git pull</code> → rebuild con <span class="flag">--no-cache</span> → levanta todo → health check.</p>
+
+      <h3>Primer despliegue (servidor nuevo)</h3>
+      <p class="what">Solo la primera vez, en un VPS recién armado:</p>
+      <div class="cmd"><code><span class="prompt">$ </span>chmod +x scripts/*.sh
+<span class="prompt">$ </span>bash scripts/setup.sh</code></div>
+
+      <div class="nota">
+        <span class="e">ℹ️</span>
+        <div>No hace falta tocar la base de datos a mano. Al arrancar, el backend aplica las migraciones, borra triggers viejos y recalcula los saldos automáticamente.</div>
+      </div>
+    </section>
+
+    <!-- ESTADO -->
+    <section id="estado">
+      <h2><span class="em">🩺</span> Ver estado y logs</h2>
+      <p class="desc">Para saber si todo está corriendo bien:</p>
+      <div class="cmd"><code><span class="cmt"># ¿Responde el sistema?</span>
+<span class="prompt">$ </span>curl http://localhost/health</code></div>
+      <div class="cmd"><code><span class="cmt"># Ver qué contenedores están corriendo</span>
+<span class="prompt">$ </span>docker compose ps</code></div>
+      <div class="cmd"><code><span class="cmt"># Ver logs en vivo (Ctrl+C para salir)</span>
+<span class="prompt">$ </span>docker compose logs -f</code></div>
+      <div class="cmd"><code><span class="cmt"># Logs solo del backend, últimas 50 líneas</span>
+<span class="prompt">$ </span>docker compose logs backend --tail 50</code></div>
+    </section>
+
+    <!-- DOCKER -->
+    <section id="docker">
+      <h2><span class="em">🐳</span> Comandos Docker más usados</h2>
+      <table>
+        <tr><th>Comando</th><th>Qué hace</th></tr>
+        <tr><td><code>docker compose ps</code></td><td>Lista los servicios y su estado</td></tr>
+        <tr><td><code>docker compose up -d</code></td><td>Levanta todo en segundo plano</td></tr>
+        <tr><td><code>docker compose down</code></td><td>Apaga todos los contenedores</td></tr>
+        <tr><td><code>docker compose restart</code></td><td>Reinicia todos los servicios</td></tr>
+        <tr><td><code>docker compose restart backend</code></td><td>Reinicia solo el backend</td></tr>
+        <tr><td><code>docker compose build backend frontend</code></td><td>Reconstruye las imágenes</td></tr>
+        <tr><td><code>docker ps</code></td><td>Contenedores corriendo (todo el sistema)</td></tr>
+        <tr><td><code>docker stats</code></td><td>Uso de CPU / RAM en vivo</td></tr>
+      </table>
+      <div class="warn">
+        <span class="e">⚠️</span>
+        <div><code>docker compose down -v</code> borra también los <b>volúmenes</b> (¡incluida la base de datos!). Usalo solo si querés resetear todo desde cero.</div>
+      </div>
+    </section>
+
+    <!-- PRUNE -->
+    <section id="prune">
+      <h2><span class="em">🧹</span> Liberar espacio en disco (prune)</h2>
+      <p class="desc">Cada vez que reconstruís la app, Docker deja imágenes y contenedores viejos que ocupan espacio. Con el tiempo el disco se llena. Estos comandos limpian esa basura sin tocar lo que está en uso.</p>
+
+      <h3>1. Ver cuánto espacio ocupa Docker</h3>
+      <div class="cmd"><code><span class="prompt">$ </span>docker system df</code></div>
+      <p class="what">Te muestra cuánto pesan imágenes, contenedores y volúmenes, y cuánto es <b>"reclaimable"</b> (recuperable).</p>
+
+      <h3>2. Limpieza segura (recomendada)</h3>
+      <div class="cmd"><code><span class="cmt"># Borra contenedores parados, redes sin usar e imágenes colgadas</span>
+<span class="prompt">$ </span>docker system prune <span class="flag">-f</span></code></div>
+      <p class="what">El <span class="flag">-f</span> evita que te pida confirmación. Es seguro: <b>no toca</b> lo que está corriendo.</p>
+
+      <h3>3. Limpieza más profunda (libera más)</h3>
+      <div class="cmd"><code><span class="cmt"># Además borra TODAS las imágenes que no estén en uso por un contenedor activo</span>
+<span class="prompt">$ </span>docker system prune <span class="flag">-a -f</span></code></div>
+      <div class="warn">
+        <span class="e">⚠️</span>
+        <div>Con <span class="flag">-a</span> se borran todas las imágenes no usadas. No hay drama: la próxima vez que levantes la app, Docker las vuelve a construir/descargar (tarda un poco más esa vez).</div>
+      </div>
+
+      <h3>4. Limpiezas puntuales</h3>
+      <div class="cmd"><code><span class="cmt"># Solo imágenes colgadas (dangling)</span>
+<span class="prompt">$ </span>docker image prune <span class="flag">-f</span>
+
+<span class="cmt"># Solo contenedores parados</span>
+<span class="prompt">$ </span>docker container prune <span class="flag">-f</span>
+
+<span class="cmt"># Caché de builds viejos (suele liberar bastante)</span>
+<span class="prompt">$ </span>docker builder prune <span class="flag">-f</span></code></div>
+
+      <div class="danger">
+        <span class="e">🚨</span>
+        <div><b>NUNCA</b> uses <code>docker system prune --volumes</code> ni <code>docker volume prune</code> a la ligera en este servidor: ahí vive la <b>base de datos</b>. Si borrás el volumen de Postgres, perdés todos los datos. Hacé un backup antes si tenés dudas.</div>
+      </div>
+
+      <h3>Rutina sugerida para liberar espacio</h3>
+      <div class="cmd"><code><span class="prompt">$ </span>docker system df          <span class="cmt"># 1. ver cuánto hay para limpiar</span>
+<span class="prompt">$ </span>docker system prune <span class="flag">-a -f</span>   <span class="cmt"># 2. limpiar imágenes/contenedores viejos</span>
+<span class="prompt">$ </span>docker builder prune <span class="flag">-f</span>    <span class="cmt"># 3. limpiar caché de builds</span>
+<span class="prompt">$ </span>df -h                      <span class="cmt"># 4. confirmar espacio libre en disco</span></code></div>
+    </section>
+
+    <!-- BACKUPS -->
+    <section id="backups">
+      <h2><span class="em">💾</span> Backups</h2>
+      <p class="desc">El script <code>backup.sh</code> guarda un respaldo comprimido de la base de datos y de las facturas, y borra los backups de más de 30 días.</p>
+      <div class="cmd"><code><span class="cmt"># Backup manual</span>
+<span class="prompt">$ </span>bash scripts/backup.sh
+
+<span class="cmt"># Restaurar un backup</span>
+<span class="prompt">$ </span>bash scripts/restore.sh backups/granja_2024-01-15_14-30-00.sql.gz</code></div>
+      <h3>Programar backup diario (cron)</h3>
+      <div class="cmd"><code><span class="prompt">$ </span>sudo crontab -e
+<span class="cmt"># Agregá esta línea (backup todos los días a las 3 AM):</span>
+0 3 * * * cd /opt/granja-avicola && bash scripts/backup.sh</code></div>
+    </section>
+
+    <!-- SALDOS -->
+    <section id="saldos">
+      <h2><span class="em">🧮</span> Diagnóstico de saldos</h2>
+      <p class="desc">Para verificar que todos los saldos de clientes estén cuadrados (debería dar <code>descuadrados: 0</code>):</p>
+      <div class="cmd"><code><span class="cmt"># Reemplazá TU_TOKEN por un token de admin</span>
+<span class="prompt">$ </span>curl -H <span class="flag">"Authorization: Bearer TU_TOKEN"</span> \
+     http://localhost/api/clientes/diagnostico/saldos</code></div>
+      <p class="what">El token lo obtenés logueándote como admin en la app. Al arrancar, el backend ya recalcula todos los saldos solo.</p>
+    </section>
+
+    <!-- CUIDADO -->
+    <section id="cuidado">
+      <h2><span class="em">⚠️</span> Cosas a tener en cuenta</h2>
+      <table>
+        <tr><th>Situación</th><th>Qué hacer</th></tr>
+        <tr><td>Antes de cualquier cambio grande</td><td>Hacé un backup: <code>bash scripts/backup.sh</code></td></tr>
+        <tr><td>El disco se está llenando</td><td>Corré la rutina de <code>prune</code> (sección 6)</td></tr>
+        <tr><td>"Demasiadas peticiones"</td><td>Ya está corregido; reconstruí el backend si persiste</td></tr>
+        <tr><td>El navegador apunta a localhost:3001</td><td>Reconstruí el frontend (<code>update.sh</code> ya lo hace)</td></tr>
+        <tr><td>El sistema pide reiniciarse</td><td><code>sudo reboot</code> cuando no haya nadie usando la app</td></tr>
+      </table>
+      <div class="nota">
+        <span class="e">💡</span>
+        <div>Regla de oro: ante la duda, <b>primero backup</b>, después tocás. Y nunca borres volúmenes de Docker sin estar 100% seguro.</div>
+      </div>
+    </section>
+
+    <footer>
+      <p><strong>Granja Avícola PWA</strong> · Guía de administración del servidor 🖥️</p>
+    </footer>
+  </div>
+</body>
+</html>
