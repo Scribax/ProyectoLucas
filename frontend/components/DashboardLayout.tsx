@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import {
   LayoutDashboard,
@@ -30,6 +30,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuthStore();
   const [isDark, setIsDark] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -46,6 +47,11 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
     setIsDark(!isDark);
     document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', !isDark ? 'dark' : 'light');
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.push('/');
   };
 
   const menuItems = [
@@ -98,8 +104,10 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             <button
-              onClick={logout}
+              type="button"
+              onClick={handleLogout}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-red-500"
+              title="Cerrar sesión"
             >
               <LogOut className="w-5 h-5" />
             </button>
