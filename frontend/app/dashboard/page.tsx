@@ -20,6 +20,7 @@ import {
   X,
   Package,
   CreditCard,
+  KeyRound,
   Home,
   Receipt
 } from 'lucide-react';
@@ -106,6 +107,7 @@ export default function Dashboard() {
     { icon: CreditCard, label: 'Facturas', href: '/facturas' },
     { icon: Receipt, label: 'Gastos', href: '/gastos' },
     { icon: TrendingUp, label: 'Reportes', href: '/reportes' },
+    { icon: KeyRound, label: 'Mi cuenta', href: '/perfil' },
   ];
 
   const StatCard = ({ icon: Icon, title, value, color, subtitle, onClick }: any) => (
@@ -147,6 +149,9 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link href="/perfil" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-600 dark:text-gray-300" title="Mi cuenta">
+              <KeyRound className="w-5 h-5" />
+            </Link>
             <button onClick={toggleTheme} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>

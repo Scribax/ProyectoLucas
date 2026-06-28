@@ -55,7 +55,7 @@ export default function LoginForm() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
-                placeholder="admin"
+                placeholder="Tu usuario"
                 required
               />
             </div>
@@ -98,11 +98,6 @@ export default function LoginForm() {
               )}
             </button>
           </form>
-
-          <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-            <p>Usuario por defecto: <strong>admin</strong></p>
-            <p>Contraseña: <strong>admin123</strong></p>
-          </div>
         </div>
 
         {/* Footer */}
