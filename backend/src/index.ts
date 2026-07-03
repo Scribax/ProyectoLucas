@@ -112,6 +112,81 @@ const ensureSchema = async () => {
   await query(`CREATE INDEX IF NOT EXISTS idx_notificaciones_cobro_cliente ON notificaciones_cobro(cliente_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_notificaciones_cobro_estado ON notificaciones_cobro(estado)`);
 
+  // --- Reparación de pagos generales antiguos ---
+  // Los pagos guardados con venta_id NULL bajaban clientes.saldo, pero no
+  // actualizaban ventas.pagado/saldo. Eso hacía que Cobros siguiera mostrando
+  // facturas ya cubiertas. Se imputan a facturas activas desde la más antigua.
+  await query(`
+    DO $$
+    DECLARE
+      pago RECORD;
+      venta RECORD;
+      restante NUMERIC;
+      aplicado NUMERIC;
+      observacion_base TEXT;
+    BEGIN
+      FOR pago IN
+        SELECT *
+        FROM pagos
+        WHERE venta_id IS NULL
+          AND monto > 0
+          AND (observaciones IS NULL OR observaciones NOT LIKE '%[no-imputable]%')
+        ORDER BY fecha ASC, created_at ASC, id ASC
+      LOOP
+        restante := pago.monto;
+        observacion_base := COALESCE(NULLIF(pago.observaciones, ''), 'Pago general imputado automaticamente');
+
+        FOR venta IN
+          SELECT
+            v.id,
+            GREATEST(
+              v.total - COALESCE((SELECT SUM(p2.monto) FROM pagos p2 WHERE p2.venta_id = v.id), 0),
+              0
+            ) AS saldo_real
+          FROM ventas v
+          WHERE v.cliente_id = pago.cliente_id
+            AND v.is_void = false
+            AND GREATEST(
+              v.total - COALESCE((SELECT SUM(p2.monto) FROM pagos p2 WHERE p2.venta_id = v.id), 0),
+              0
+            ) > 0
+          ORDER BY v.fecha ASC, v.id ASC
+        LOOP
+          EXIT WHEN restante <= 0.009;
+          aplicado := LEAST(restante, venta.saldo_real);
+
+          IF aplicado > 0.009 THEN
+            INSERT INTO pagos (cliente_id, venta_id, monto, metodo, observaciones, created_by, fecha, created_at)
+            VALUES (
+              pago.cliente_id,
+              venta.id,
+              ROUND(aplicado, 2),
+              pago.metodo,
+              observacion_base || ' [imputado desde pago general ' || pago.id::text || ']',
+              pago.created_by,
+              pago.fecha,
+              pago.created_at
+            );
+            restante := restante - aplicado;
+          END IF;
+        END LOOP;
+
+        IF restante <= 0.009 THEN
+          DELETE FROM pagos WHERE id = pago.id;
+        ELSIF restante < pago.monto - 0.009 THEN
+          UPDATE pagos
+          SET monto = ROUND(restante, 2),
+              observaciones = observacion_base || ' [no-imputable: remanente sin factura pendiente]'
+          WHERE id = pago.id;
+        ELSE
+          UPDATE pagos
+          SET observaciones = observacion_base || ' [no-imputable: sin factura pendiente]'
+          WHERE id = pago.id;
+        END IF;
+      END LOOP;
+    END $$;
+  `);
+
   // --- Tabla articulos (puede no existir en bases viejas) ---
   await query(`CREATE TABLE IF NOT EXISTS articulos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

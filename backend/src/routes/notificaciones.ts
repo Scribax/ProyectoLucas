@@ -33,6 +33,7 @@ router.get('/cobros-pendientes', async (req: Request, res: Response) => {
        LEFT JOIN notificaciones_cobro n ON n.venta_id = v.id AND n.estado = 'enviada'
        WHERE v.is_void = false
          AND c.is_active = true
+         AND c.saldo > 0
          AND v.saldo > 0
          AND v.estado IN ('pendiente', 'parcial')
          AND v.fecha <= NOW() - ($1::int * INTERVAL '1 day')

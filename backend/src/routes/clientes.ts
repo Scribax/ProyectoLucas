@@ -5,6 +5,36 @@ import { authenticateJWT, requireRole, requireWriteAccess } from '../middleware/
 const router = Router();
 router.use(authenticateJWT);
 
+const MONEY_EPSILON = 0.009;
+
+const resyncVentas = async (
+  tx: (sql: string, params?: any[]) => Promise<any>,
+  ventaIds: string[]
+) => {
+  const uniqueVentaIds = [...new Set(ventaIds)].filter(Boolean);
+  if (uniqueVentaIds.length === 0) return;
+
+  await tx(
+    `UPDATE ventas v
+     SET pagado = COALESCE(pr.total_pagado, 0),
+         saldo  = GREATEST(v.total - COALESCE(pr.total_pagado, 0), 0),
+         estado = CASE
+           WHEN GREATEST(v.total - COALESCE(pr.total_pagado, 0), 0) <= 0 THEN 'pagada'
+           WHEN COALESCE(pr.total_pagado, 0) > 0 THEN 'parcial'
+           ELSE 'pendiente'
+         END,
+         updated_at = CURRENT_TIMESTAMP
+     FROM (
+       SELECT venta_id, SUM(monto) AS total_pagado
+       FROM pagos
+       WHERE venta_id = ANY($1::uuid[])
+       GROUP BY venta_id
+     ) pr
+     WHERE v.id = pr.venta_id`,
+    [uniqueVentaIds]
+  );
+};
+
 // Listar todos los clientes
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -205,8 +235,9 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
   try {
     const { id } = req.params;
     const { monto, metodo, observaciones, venta_id } = req.body;
+    const montoPago = Number(monto);
 
-    if (!monto || monto <= 0) {
+    if (!Number.isFinite(montoPago) || montoPago <= 0) {
       return res.status(400).json({ message: 'Monto inválido' });
     }
 
@@ -215,7 +246,7 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
     if (clienteResult.rows.length === 0) {
       return res.status(404).json({ message: 'Cliente no encontrado' });
     }
-    if (parseFloat(clienteResult.rows[0].saldo) < monto) {
+    if (parseFloat(clienteResult.rows[0].saldo) + MONEY_EPSILON < montoPago) {
       return res.status(400).json({ message: 'El pago excede el saldo del cliente' });
     }
 
@@ -227,53 +258,93 @@ router.post('/:id/pagos', requireWriteAccess, async (req: Request, res: Response
         return res.status(404).json({ message: 'Factura no encontrada' });
       }
       const saldoVenta = parseFloat(ventaCheck.rows[0].saldo);
-      if (monto > saldoVenta) {
-        return res.status(400).json({ message: `El pago ($${monto}) supera el saldo de la factura ($${saldoVenta})` });
+      if (montoPago > saldoVenta + MONEY_EPSILON) {
+        return res.status(400).json({ message: `El pago ($${montoPago}) supera el saldo de la factura ($${saldoVenta})` });
+      }
+    } else {
+      const ventasSaldo = await query(
+        `SELECT COALESCE(SUM(saldo), 0) AS saldo_facturas
+         FROM ventas
+         WHERE cliente_id = $1 AND is_void = false AND saldo > 0`,
+        [id]
+      );
+      const saldoFacturas = parseFloat(ventasSaldo.rows[0]?.saldo_facturas || 0);
+      if (montoPago > saldoFacturas + MONEY_EPSILON) {
+        return res.status(400).json({
+          message: 'No hay facturas pendientes suficientes para imputar este pago. Reiniciá el backend para aplicar la reparación automática y volvé a intentar.',
+        });
       }
     }
 
     // Todo en una transacción para mantener consistencia (un único cliente del pool)
-    const pago = await withTransaction(async (tx) => {
-      // 1. Insertar el pago
-      const result = await tx(
-        'INSERT INTO pagos (cliente_id, venta_id, monto, metodo, observaciones, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [id, venta_id || null, monto, metodo || 'efectivo', observaciones, req.user!.id]
-      );
+    const pagos = await withTransaction(async (tx) => {
+      const pagosCreados: any[] = [];
+      const ventasAfectadas: string[] = [];
 
-      // 2. Si el pago es de una factura puntual, recalcular pagado/saldo/estado
-      //    de ESA venta a partir de la suma real de sus pagos (no acumulando
-      //    a ciegas, para no inflar ventas.pagado).
       if (venta_id) {
-        await tx(
-          `UPDATE ventas v
-           SET pagado = pr.total_pagado,
-               saldo  = GREATEST(v.total - pr.total_pagado, 0),
-               estado = CASE
-                 WHEN GREATEST(v.total - pr.total_pagado, 0) <= 0 THEN 'pagada'
-                 WHEN pr.total_pagado > 0 THEN 'parcial'
-                 ELSE 'pendiente'
-               END,
-               updated_at = CURRENT_TIMESTAMP
-           FROM (
-             SELECT COALESCE(SUM(monto), 0) AS total_pagado
-             FROM pagos WHERE venta_id = $1
-           ) pr
-           WHERE v.id = $1`,
-          [venta_id]
+        const result = await tx(
+          'INSERT INTO pagos (cliente_id, venta_id, monto, metodo, observaciones, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [id, venta_id, montoPago, metodo || 'efectivo', observaciones, req.user!.id]
         );
+        pagosCreados.push(result.rows[0]);
+        ventasAfectadas.push(venta_id);
+      } else {
+        let restante = montoPago;
+        const ventasPendientes = await tx(
+          `SELECT id, saldo
+           FROM ventas
+           WHERE cliente_id = $1 AND is_void = false AND saldo > 0
+           ORDER BY fecha ASC, id ASC
+           FOR UPDATE`,
+          [id]
+        );
+
+        for (const venta of ventasPendientes.rows) {
+          if (restante <= MONEY_EPSILON) break;
+
+          const saldoVenta = parseFloat(venta.saldo) || 0;
+          const aplicado = Math.min(restante, saldoVenta);
+          if (aplicado <= MONEY_EPSILON) continue;
+
+          const result = await tx(
+            'INSERT INTO pagos (cliente_id, venta_id, monto, metodo, observaciones, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [
+              id,
+              venta.id,
+              Number(aplicado.toFixed(2)),
+              metodo || 'efectivo',
+              observaciones || 'Pago imputado automaticamente al saldo del cliente',
+              req.user!.id
+            ]
+          );
+          pagosCreados.push(result.rows[0]);
+          ventasAfectadas.push(venta.id);
+          restante = Number((restante - aplicado).toFixed(2));
+        }
+
+        if (restante > MONEY_EPSILON) {
+          throw new Error('No hay facturas pendientes suficientes para imputar este pago');
+        }
       }
 
-      // 3. Recalcular el saldo del cliente desde la única fuente de verdad.
+      // Recalcular facturas afectadas desde la suma real de pagos. Esto evita
+      // que un pago general deje boletas vencidas pendientes en Cobros.
+      await resyncVentas(tx, ventasAfectadas);
+
+      // Recalcular el saldo del cliente desde la única fuente de verdad.
       //    (Reemplaza tanto los triggers de Postgres como los updates manuales
       //     que causaban el saldo duplicado / desactualizado.)
       await recalcularSaldoCliente(tx, id);
 
-      return result.rows[0];
+      return pagosCreados;
     });
 
-    res.status(201).json({ pago });
+    res.status(201).json({ pago: pagos[0], pagos });
   } catch (error) {
     console.error('Error en POST /clientes/:id/pagos:', error);
+    if (error instanceof Error && error.message === 'No hay facturas pendientes suficientes para imputar este pago') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Error del servidor' });
   }
 });
