@@ -10,7 +10,7 @@ describe('cobrosService', () => {
     expect(normalizePhoneForWhatsApp('+1 829 555 0000')).toBe('18295550000');
   });
 
-  it('construye el mensaje de cobro con cliente, saldo y dias vencidos', () => {
+  it('construye el mensaje de cobro con cliente, saldo, dias vencidos y moneda argentina', () => {
     const mensaje = buildCobroMessage({
       cliente_nombre: 'Colmado Ana',
       saldo: 1250,
@@ -21,6 +21,8 @@ describe('cobrosService', () => {
     expect(mensaje).toContain('Hola Colmado Ana');
     expect(mensaje).toContain('6 días');
     expect(mensaje).toContain('saldo pendiente');
+    expect(mensaje).toContain('ARS');
+    expect(mensaje).not.toContain('RD$');
   });
 
   it('mapea una venta vencida a cobro pendiente con URL wa.me', () => {

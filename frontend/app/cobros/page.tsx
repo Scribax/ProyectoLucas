@@ -27,9 +27,10 @@ interface CobroPendiente {
 }
 
 const formatMoney = (value: number) =>
-  new Intl.NumberFormat('es-DO', {
+  new Intl.NumberFormat('es-AR', {
     style: 'currency',
-    currency: 'DOP',
+    currency: 'ARS',
+    currencyDisplay: 'code',
     minimumFractionDigits: 2,
   }).format(Number(value || 0));
 

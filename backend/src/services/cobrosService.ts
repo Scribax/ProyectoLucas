@@ -55,9 +55,10 @@ export const normalizePhoneForWhatsApp = (
 };
 
 export const formatMoney = (value: number): string => {
-  return new Intl.NumberFormat('es-DO', {
+  return new Intl.NumberFormat('es-AR', {
     style: 'currency',
-    currency: 'DOP',
+    currency: 'ARS',
+    currencyDisplay: 'code',
     minimumFractionDigits: 2,
   }).format(value);
 };
@@ -70,7 +71,7 @@ export const buildCobroMessage = (row: {
 }): string => {
   const saldo = Number(row.saldo) || 0;
   const dias = Number(row.dias_vencida) || 0;
-  const fecha = new Date(row.fecha).toLocaleDateString('es-DO');
+  const fecha = new Date(row.fecha).toLocaleDateString('es-AR');
 
   return [
     `Hola ${row.cliente_nombre}, bendiciones.`,
