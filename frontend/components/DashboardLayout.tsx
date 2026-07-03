@@ -20,6 +20,7 @@ import {
   Receipt,
   Package,
   KeyRound,
+  MessageCircle,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -61,6 +62,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
     { icon: Package, label: 'Artículos', href: '/articulos' },
     { icon: Users, label: 'Clientes', href: '/clientes' },
     { icon: ShoppingCart, label: 'Ventas', href: '/ventas' },
+    { icon: MessageCircle, label: 'Cobros', href: '/cobros' },
     { icon: CreditCard, label: 'Facturas', href: '/facturas' },
     { icon: Receipt, label: 'Gastos', href: '/gastos' },
     { icon: TrendingUp, label: 'Reportes', href: '/reportes' },

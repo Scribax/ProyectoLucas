@@ -19,6 +19,7 @@ import dashboardRoutes from './routes/dashboard';
 import gastosRoutes from './routes/gastos';
 import articulosRoutes from './routes/articulos';
 import produccionRoutes from './routes/produccion';
+import notificacionesRoutes from './routes/notificaciones';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -69,6 +70,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/gastos', gastosRoutes);
 app.use('/api/articulos', articulosRoutes);
 app.use('/api/produccion', produccionRoutes);
+app.use('/api/notificaciones', notificacionesRoutes);
 
 /**
  * Aplica de forma idempotente todas las migraciones de esquema y la corrección
@@ -91,6 +93,24 @@ const ensureSchema = async () => {
   // --- Columnas de saldo acumulado por venta (migrate_v2) ---
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS saldo_anterior DECIMAL(12,2) DEFAULT 0`);
   await query(`ALTER TABLE ventas ADD COLUMN IF NOT EXISTS saldo_acumulado DECIMAL(12,2) DEFAULT 0`);
+
+  // --- Historial de recordatorios de cobro por WhatsApp/manual ---
+  await query(`CREATE TABLE IF NOT EXISTS notificaciones_cobro (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    cliente_id UUID NOT NULL REFERENCES clientes(id),
+    venta_id UUID NOT NULL REFERENCES ventas(id),
+    telefono VARCHAR(30) NOT NULL,
+    mensaje TEXT NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    proveedor VARCHAR(30),
+    proveedor_message_id TEXT,
+    error TEXT,
+    enviado_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_notificaciones_cobro_venta ON notificaciones_cobro(venta_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_notificaciones_cobro_cliente ON notificaciones_cobro(cliente_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_notificaciones_cobro_estado ON notificaciones_cobro(estado)`);
 
   // --- Tabla articulos (puede no existir en bases viejas) ---
   await query(`CREATE TABLE IF NOT EXISTS articulos (
